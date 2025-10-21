@@ -1,0 +1,157 @@
+### USER SEGMENTATION DATA SOURCE CONTEXT
+
+The system includes a data source called **User Segmentation Dataset**, which contains groups of readers clustered according to their content consumption patterns, engagement behavior, regional activity, and topical preferences.
+
+Each **user segment** represents a unique behavioral profile derived from the news platform’s analytics data.
+
+This data source provides the foundation for the user-segment-related analytical tools (e.g., get_segment_description, get_segment_time_activity, get_segment_regions, etc.).
+
+Each segment includes the following key attributes:
+- **id (int)**: Unique numeric identifier for the segment.
+- **title (string)**: Descriptive name summarizing the main interests of the segment.
+- **description (string)**: Narrative text describing the segment’s reading behavior and preferences.
+- **docs_engaged / docs_notengaged**: Lists of articles that users engaged or did not engage with.
+- **high_docs / med_docs / low_docs**: Documents ranked by representativeness of the segment.
+- **df**: DataFrame with event-level data (time, engagement, topics).
+- **regions**: Dictionary mapping geographic regions to user counts.
+- **user_type_cnt**: Dictionary with counts of “frequent” and “nonfrequent” users.
+- **seq_model**: Probabilistic model describing topic transitions and next-topic predictions.
+- **regions_desc**: Summary text of regional activity.
+
+---
+
+### AVAILABLE USER SEGMENTS
+
+The dataset contains 12 user segments, each with a specific dominant theme:
+
+| ID | Segment Title |
+|----|----------------|
+| 0 | Schulwesen und Unwetter-Themen dominieren Interesse |
+| 1 | Westernstadt- und Pullman-City-Themen dominieren Interesse |
+| 2 | Bahntreue und Tarifstreit |
+| 3 | Themen rund um politische Ereignisse und Rechtsextremismus |
+| 4 | Deutschland-Themen und Politik im Fokus |
+| 5 | Rechtsextremismus und Politik im Fokus |
+| 6 | Unwetter, Verbrechen und politische Debatten |
+| 7 | Kriminalität und regionale Ereignisse im Fokus |
+| 8 | Politik, Wirtschaft und Alltag in Deutschland |
+| 9 | Sport, Politik und Alltag in der Region |
+| 10 | Politik und Rechtsextremismus in den Medien im Fokus |
+| 11 | Politische Debatten und Kriminalität im Fokus |
+
+---
+
+
+### NEWS TOPICS DATA SOURCE CONTEXT
+
+The system includes a data source called **News Topics Dataset**, which contains the latent topics discovered from the entire corpus of news articles through topic modeling.  
+Each **topic** represents a group of articles that share similar themes or semantic content.  
+These topics are the foundation for interpreting user interests, engagement patterns, and cross-topic transitions in the system.
+
+This data source provides input to topic-related analytical tools (e.g., get_news_topics_info, get_news_topics_high_docs, get_news_topics_low_docs).
+
+Each topic entry includes the following key attributes:
+- **id (int)**: Unique identifier of the topic.
+- **title (string)**: Concise and descriptive name of the topic, summarizing its main focus.
+- **desc (string)**: Narrative description of what the topic represents, including the key themes or issues covered.
+- **high_docs (list)**: List of article IDs that are highly representative of this topic.
+- **med_docs (list)**: Articles with moderate association to the topic.
+- **low_docs (list)**: Articles that are weakly associated with the topic but still relevant for broader analysis.
+
+---
+
+### AVAILABLE TOPICS
+
+The dataset contains 25 topics representing different thematic clusters identified across all articles:
+
+| ID | Topic Title |
+|----|--------------|
+| 0 | Bayern – Leben und Kultur |
+| 1 | Finanzielle Marktdynamik |
+| 2 | Verkehrsunfälle und Strafverfolgung |
+| 3 | Fußball-Saison-Highlights |
+| 4 | Deutsche Politik und Parteien |
+| 5 | Europäische Politik und Gesellschaft |
+| 6 | Aktuelle Ereignisse im Finanzmarkt |
+| 7 | Pandemiefolgen und Gesundheitspolitik |
+| 8 | Europäische Politik und Konflikte |
+| 9 | Politische Entwicklungen im internationalen Kontext |
+| 10 | Europäische Union und ihre Mitgliedsländer |
+| 11 | Bayerns Landkreise und Städte |
+| 12 | Bayerisches Stadtleben |
+| 13 | Verkehrssituation in Deutschland |
+| 14 | Bayerns Staatsregierung im Fokus |
+| 15 | Rechtliche Verstrickungen |
+| 16 | Oberbayerisches Stadt- und Infrastruktur-Thema |
+| 17 | Wirtschaftliche Entwicklungen und Finanzen |
+| 18 | Deutsche Mannschaftssport |
+| 19 | Schwäbische Stadtgesellschaft |
+| 20 | Die Regionen Südwestdeutschlands |
+| 21 | Jugendliche und Familie in Deutschland |
+| 22 | Deutschlands innenpolitische Herausforderungen |
+| 23 | Brandschutz und Einsatz |
+| 24 | Bayernland und Kirche |
+
+---
+
+### RAW NEWS ARTICLES DATA SOURCE CONTEXT
+
+The system includes a data source called **Raw News Articles Dataset**, which contains detailed metadata and text information for all published news articles.  
+It is the most granular source of information in the system and serves as the foundation for topic modeling, segment analysis, and content retrieval.  
+Although it provides article-level data, most analytical operations use it indirectly through higher-level abstractions such as user segments or topic clusters.
+
+This dataset is primarily used by tools that need to access article titles, teasers, publication dates, or cluster associations (e.g., get_articles_info, get_top_recent_articles, get_unique_clusters).
+
+---
+
+### DATA STRUCTURE OVERVIEW
+
+Each row represents one article with rich metadata, textual fields, and derived analytical columns.  
+The dataset includes approximately **68,000 records** and the following columns:
+
+| Column | Description |
+|:--|:--|
+| **primaryCategory** | The main editorial category of the article (e.g., *bayern*, *sport*, *wirtschaft*). |
+| **first_publication_date** | Unix timestamp (in milliseconds) representing the first time the article was published. |
+| **title** | The article headline. |
+| **teaserText** | Short teaser or preview text shown before reading the article. |
+| **tags** | List of keywords and metadata tags assigned to the article. |
+| **text** | The raw article text in HTML or structured format. |
+| **text_clean** | Preprocessed version of the text for analytical and modeling tasks (cleaned and tokenized). |
+| **embedding** | Numerical vector representation (embedding) of the article text for similarity or clustering tasks. |
+| **word_count** | Total number of words in the article. |
+| **read_time_seconds** | Estimated reading time based on text length and complexity. |
+| **tags_x / merged_doc** | Processed metadata combining tags and document text for unified analysis. |
+| **region** | List of regional labels associated with the article (e.g., *Oberbayern*, *Schwaben*). |
+| **clusters** | List of cluster or topic IDs assigned to this article (corresponding to topics in the news_topics dataset). |
+| **_d columns (title_d, text_d, teaser_d, etc.)** | Duplicated or preprocessed versions of the main text fields for modeling and debugging. |
+
+---
+
+### EXAMPLE ENTRY
+
+| Field | Example |
+|:--|:--|
+| **primaryCategory** | `bayern` |
+| **first_publication_date** | `1330566400638` |
+| **title** | `Nockherberg-Texter Hannes Burger: Ein Leben für die Fastenpredigt` |
+| **teaserText** | `Nockherberggeschichte geschrieben 22 Hannes Burger...` |
+| **tags** | `[bayern, hannes_burger, fastenpredigt, nockherberg]` |
+| **text_clean** | `"1937: Kindheit in Schwabing. Am 18. Juni 1937..."` |
+| **embedding** | `[−0.032, 0.034, 0.057, …]` |
+| **word_count** | `590` |
+| **read_time_seconds** | `141.6` |
+| **region** | `[]` |
+| **clusters** | `[0, 11, 14]` |
+
+---
+
+### ROLE IN THE ANALYTICAL SYSTEM
+
+This dataset underpins all higher-level analyses by providing:
+- Article metadata for **topic labeling** and **temporal analysis**.
+- Source data for **user–article interactions** in the user segmentation dataset.
+- A bridge between **topics**, **segments**, and **geographical context**.
+- Factual information retrieval when the agent must **display article titles, teasers, or publication dates**.
+
+---
