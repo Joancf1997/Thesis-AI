@@ -19,7 +19,7 @@ Your output must be a JSON array of tasks, where each task represents one tool c
     "id": "<unique_task_id>",
     "dep": ["<dependent_task_ids>"],
     "args": [
-      {{ "key": "<argument_name>", "value": "<value_or_DEP_reference>" }}
+      {{ "key": "<argument_name>", "value": "<value_or_DEP_reference>", "property": "<optional_property_name_from_DEP_output>" }}
     ]
   }},
   ...
@@ -31,7 +31,9 @@ Your output must be a JSON array of tasks, where each task represents one tool c
 
 - Only select tools from the available tool list.
 - For arguments depending on a previous task, prefix the dependent task ID with "DEP_".
-- The "dep" field must list all prerequisite task IDs.
+- Use `"property"` when only a specific field from the dependent task’s output should be used as the argument.
+- The `"property"` must match an existing key from the tool’s defined output schema.
+- The `"dep"` field must list all prerequisite task IDs.
 - Use valid argument names and types as defined in the tool schema.
 - The plan order does not matter; dependencies define execution order.
 - If the user query can be answered directly without any tools, return an empty array `[]`.
@@ -51,12 +53,12 @@ Your output must be a JSON array of tasks, where each task represents one tool c
       {{ "name": "segment_id", "type": "integer" }}
     ],
     "output": {{
-        "segment_id": integer - Segment ID,
-        "title": string - Title of the segment,
-        "description": string - Textual description of the user segment,
-        "user_frequent": int - Count of frequent users in the segment,
-        "user_nonfrequent": int - Count of non-frequent users in the segment,
-        "region_consumption": dictionary - Key-value mapping of region names to number of readers
+        "segment_id": "integer",
+        "title": "string",
+        "description": "string",
+        "user_frequent": "integer",
+        "user_nonfrequent": "integer",
+        "region_consumption": "dictionary"
     }}
   }},
   {{
@@ -66,132 +68,12 @@ Your output must be a JSON array of tasks, where each task represents one tool c
       {{ "name": "segment_id", "type": "integer" }}
     ],
     "output": {{
-        "segment_id": integer - Segment ID,
-        "avg_scroll_depth": float - Average scroll depth,
-        "avg_engaged_secs": float - Average engaged time in seconds,
-        "avg_words_per_minute": float - Average reading speed in words per minute,
-        "median_engaged_secs": float - Median engaged time,
-        "engagement_rate": float - Engagement rate (0 to 1)
-    }}
-  }},
-  {{
-    "name": "get_topic_transitions",
-    "objective": "Return the most likely topic-to-topic transitions for a user segment.",
-    "arguments": [
-      {{ "name": "segment_id", "type": "integer" }},
-      {{ "name": "top_n", "type": "integer" }}
-    ],
-    "output": [
-      {{
-        "from_topic": string - Starting topic name,
-        "to_topic": string - Destination topic name,
-        "probability": float - Probability of transition between topics
-      }}
-    ]
-  }},
-  {{
-    "name": "get_next_topic_prediction",
-    "objective": "Predict the next most likely topics for a given current topic within a user segment.",
-    "arguments": [
-      {{ "name": "segment_id", "type": "integer" }},
-      {{ "name": "current_topic", "type": "string" }},
-      {{ "name": "top_n", "type": "integer" }}
-    ],
-    "output": {{
-        "current_topic": string - The topic currently being read,
-        "predictions": [
-            {{
-                "next_topic": string - Predicted next topic name,
-                "probability": float - Probability value of transition
-            }}
-        ]
-    }}
-  }},
-  {{
-    "name": "get_segment_regions",
-    "objective": "Retrieve the most active regions for a given user segment.",
-    "arguments": [
-      {{ "name": "segment_id", "type": "integer" }},
-      {{ "name": "top_n", "type": "integer" }}
-    ],
-    "output": [
-      {{
-        "region": string - Name of the region,
-        "readers": int - Number of readers from that region
-      }}
-    ]
-  }},
-  {{
-    "name": "get_segment_time_activity",
-    "objective": "Return reading activity per hour for a user segment, including the peak hour of engagement.",
-    "arguments": [
-      {{ "name": "segment_id", "type": "integer" }}
-    ],
-    "output": {{
-        "segment_id": integer - Segment ID,
-        "activity_by_hour": [
-            {{
-                "hour": string - Hour interval in the format HH:00-HH:59,
-                "reads": int - Number of reads in that hour
-            }}
-        ],
-        "peak_activity": string - Hour interval with maximum activity,
-        "peak_value": int - Maximum number of reads during the peak hour
-    }}
-  }},
-  {{
-    "name": "get_segment_activity_by_day_part",
-    "objective": "Analyze user activity by day part (morning, afternoon, evening, night) and return the most active period.",
-    "arguments": [
-      {{ "name": "segment_id", "type": "integer" }}
-    ],
-    "output": {{
-        "segment_id": integer - Segment ID,
-        "activity_by_day_part": {{
-            "morning": int - Reads in morning,
-            "afternoon": int - Reads in afternoon,
-            "evening": int - Reads in evening,
-            "night": int - Reads at night
-        }},
-        "peak_day_part": string - The most active part of the day,
-        "peak_value": int - Number of reads in that peak day part
-    }}
-  }},
-  {{
-    "name": "get_segment_articles_by_time",
-    "objective": "Retrieve articles read by a user segment within a specific time window (time format 0 to 24 hours, in integer and round format).",
-    "arguments": [
-      {{ "name": "segment_id", "type": "integer" }},
-      {{ "name": "start_hour", "type": "integer" }},
-      {{ "name": "end_hour", "type": "integer" }}
-    ],
-    "output": {{
-        "segment_id": integer - Segment ID,
-        "start_hour": int - Starting hour of the range,
-        "end_hour": int - Ending hour of the range,
-        "articles": list - List of article IDs read during that period
-    }}
-  }},
-  {{
-    "name": "get_segment_engage_docs",
-    "objective": "Retrieve the most engaged documents for a specific user segment.",
-    "arguments": [
-      {{ "name": "segment_id", "type": "integer" }}
-    ],
-    "output": {{
-        "segment_id": integer - Segment ID,
-        "docs_engage": list - List of highly engaged document IDs
-    }}
-  }},
-  {{
-    "name": "get_segment_not_engage_docs",
-    "objective": "Retrieve documents that show low or no engagement within a user segment.",
-    "arguments": [
-      {{ "name": "segment_id", "type": "integer" }}
-    ],
-    "output": {{
-        "segment_id": integer - Segment ID,
-        "docs_notengage": list - List of low engagement document IDs
+        "segment_id": "integer",
+        "avg_scroll_depth": "float",
+        "avg_engaged_secs": "float",
+        "avg_words_per_minute": "float",
+        "median_engaged_secs": "float",
+        "engagement_rate": "float"
     }}
   }},
   {{
@@ -201,89 +83,56 @@ Your output must be a JSON array of tasks, where each task represents one tool c
       {{ "name": "segment_id", "type": "integer" }}
     ],
     "output": {{
-        "segment_id": integer - Segment ID,
-        "high_representative_docs": list - List of high-representative document IDs
-    }}
-  }},
-  {{
-    "name": "get_articles_info",
-    "objective": "Retrieve metadata (title, teaser, publication date) for a list of article IDs.",
-    "arguments": [
-      {{ "name": "articles_ids", "type": "list" }}
-    ],
-    "output": {{
-        "articles": [
-            {{
-                "id": string - Article ID,
-                "title": string - Title of the article,
-                "teaserText": string - Short teaser or summary text,
-                "first_publication_date": string - Publication date in ISO format
-            }}
-        ]
-    }}
-  }},
-  {{
-    "name": "get_top_recent_articles",
-    "objective": "Retrieve the most recent articles from a list of IDs, sorted by publication date.",
-    "arguments": [
-      {{ "name": "articles_ids", "type": "list" }},
-      {{ "name": "top", "type": "integer" }}
-    ],
-    "output": {{
-        "articles": [
-            {{
-                "id": string - Article ID,
-                "title": string - Article title,
-                "teaserText": string - Short teaser text,
-                "first_publication_date": string - Date when article was published
-            }}
-        ]
+        "segment_id": "integer",
+        "high_representative_docs": "list[string]"
     }}
   }},
   {{
     "name": "get_unique_clusters",
-    "objective": "Retrieve unique topic clusters list from a list of article IDs.",
+    "objective": "Retrieve unique topic cluster identifiers from a list of article IDs.",
     "arguments": [
-      {{ "name": "articles_ids", "type": "list" }}
+      {{ "name": "articles_ids", "type": "list[string]" }}
     ],
     "output": {{
-        "unique_clusters": list - List of unique cluster identifiers
+        "unique_clusters": "list[integer]"
+    }}
+  }},
+  {{
+    "name": "get_segment_time_activity",
+    "objective": "Return reading activity per hour for a user segment, including the peak hour of engagement.",
+    "arguments": [
+      {{ "name": "segment_id", "type": "integer" }}
+    ],
+    "output": {{
+        "segment_id": "integer",
+        "activity_by_hour": "list[object]",
+        "peak_activity": "string",
+        "peak_value": "integer"
+    }}
+  }},
+  {{
+    "name": "get_segment_articles_by_time",
+    "objective": "Retrieve articles read by a user segment within a specific time window (time format 0 to 24 hours).",
+    "arguments": [
+      {{ "name": "segment_id", "type": "integer" }},
+      {{ "name": "start_hour", "type": "integer" }},
+      {{ "name": "end_hour", "type": "integer" }}
+    ],
+    "output": {{
+        "segment_id": "integer",
+        "start_hour": "integer",
+        "end_hour": "integer",
+        "articles": "list[string]"
     }}
   }},
   {{
     "name": "get_news_topics_info",
     "objective": "Retrieve information about news topics including titles and descriptions.",
     "arguments": [
-      {{ "name": "topics_id", "type": "list" }}
+      {{ "name": "topics_id", "type": "list[integer]" }}
     ],
     "output": {{
-        "topics": [
-            {{
-                "id": integer - Topic ID,
-                "title": string - Topic title,
-                "desc": string - Topic description
-            }}
-        ]
-    }}
-  }},
-  {{
-    "name": "get_news_topics_high_docs",
-    "objective": "Retrieve documents with high relevance to a specific news topic.",
-    "arguments": [
-      {{ "name": "topic_id", "type": "integer" }}
-    ],
-    "output": {{
-        "high_docs": list - List of high relevance document IDs
-    }}
-  }},
-  {{
-    "name": "get_news_topics_low_docs",
-    "objective": "Retrieve documents with low relevance to a specific news topic.",
-    "arguments": [
-      {{ "name": "topic_id", "type": "integer" }}
-    ],
-    "output": {{
-        "low_docs": list - List of low relevance document IDs
+        "topics": "list[object]"
     }}
   }}
 ]
@@ -305,77 +154,40 @@ Plan:
 ]
 
 **Example 2**
-User Query: "What are the most active hours for segment 5?"
+User Query: "List the topics represented by the most representative articles in segment 11."
 Plan:
 [
   {{
-    "task": "get_segment_time_activity",
-    "id": "time_activity_segment5",
+    "task": "get_segment_high_rep_docs",
+    "id": "high_rep_docs_segment11",
     "dep": [],
-    "args": [{{ "key": "segment_id", "value": "5" }}]
+    "args": [{{ "key": "segment_id", "value": "11" }}]
+  }},
+  {{
+    "task": "get_unique_clusters",
+    "id": "topic_clusters_segment11",
+    "dep": ["high_rep_docs_segment11"],
+    "args": [
+      {{
+        "key": "articles_ids",
+        "value": "DEP_high_rep_docs_segment11",
+        "property": "high_representative_docs"
+      }}
+    ]
+  }},
+  {{
+    "task": "get_news_topics_info",
+    "id": "topics_info_segment11",
+    "dep": ["topic_clusters_segment11"],
+    "args": [
+      {{ "key": "topics_id", "value": "DEP_topic_clusters_segment11" }}
+    ]
   }}
 ]
 
 **Example 3**
-User Query: "Which regions are most active in segment 2?"
+User Query: "Show the main topics read by users in segment 1 between 0 a.m. and 2 a.m."
 Plan:
-[
-  {{
-    "task": "get_segment_regions",
-    "id": "region_stats_segment2",
-    "dep": [],
-    "args": [
-      {{ "key": "segment_id", "value": "2" }},
-      {{ "key": "top_n", "value": "7" }}
-    ]
-  }}
-]
-
-**Example 4**
-User Query: "Given that the current topic is 'sport', what topics will users in segment 4 likely read next?"
-Plan:
-[
-  {{
-    "task": "get_next_topic_prediction",
-    "id": "next_topic_segment4_sport",
-    "dep": [],
-    "args": [
-      {{ "key": "segment_id", "value": "4" }},
-      {{ "key": "current_topic", "value": "sport" }},
-      {{ "key": "top_n", "value": "3" }}
-    ]
-  }}
-]
-
-**Example 5**
-User Query: "Find the most recent 5 articles read by users in segment 1 between 18:00 and 21:00."
-Plan:
-[
-  {{
-    "task": "get_segment_articles_by_time",
-    "id": "articles_segment1_evening",
-    "dep": [],
-    "args": [
-      {{ "key": "segment_id", "value": "1" }},
-      {{ "key": "start_hour", "value": "18" }},
-      {{ "key": "end_hour", "value": "21" }}
-    ]
-  }},
-  {{
-    "task": "get_top_recent_articles",
-    "id": "recent_articles_segment1_evening",
-    "dep": ["articles_segment1_evening"],
-    "args": [
-      {{ "key": "articles_ids", "value": "DEP_articles_segment1_evening" }},
-      {{ "key": "top", "value": "5" }}
-    ]
-  }}
-]
-
-
-** Example 6**
-User Query: “Show the main topics read by users in segment 1 between 0 a.m. and 2 a.m.”
-plan: 
 [
   {{
     "task": "get_segment_articles_by_time",
@@ -388,20 +200,15 @@ plan:
     ]
   }},
   {{
-    "task": "get_top_recent_articles",
-    "id": "recent_articles_seg1_0_to_2",
-    "dep": ["articles_seg1_0_to_2"],
-    "args": [
-      {{ "key": "articles_ids", "value": "DEP_articles_seg1_0_to_2" }},
-      {{ "key": "top", "value": "3" }}
-    ]
-  }},
-  {{
     "task": "get_unique_clusters",
     "id": "topic_clusters_seg1",
-    "dep": ["recent_articles_seg1_0_to_2"],
+    "dep": ["articles_seg1_0_to_2"],
     "args": [
-      {{ "key": "articles_ids", "value": "DEP_recent_articles_seg1_0_to_2" }}
+      {{
+        "key": "articles_ids",
+        "value": "DEP_articles_seg1_0_to_2",
+        "property": "articles"
+      }}
     ]
   }},
   {{
@@ -410,6 +217,50 @@ plan:
     "dep": ["topic_clusters_seg1"],
     "args": [
       {{ "key": "topics_id", "value": "DEP_topic_clusters_seg1" }}
+    ]
+  }}
+]
+
+**Example 4**
+User Query: "Find the three most representative articles for the segment ‘Politische Debatten und Kriminalität im Fokus’ and summarize their topics."
+Plan:
+[
+  {{
+    "task": "get_segment_high_rep_docs",
+    "id": "high_rep_docs_segment11",
+    "dep": [],
+    "args": [{{ "key": "segment_id", "value": "11" }}]
+  }},
+  {{
+    "task": "get_articles_info",
+    "id": "articles_info_segment11",
+    "dep": ["high_rep_docs_segment11"],
+    "args": [
+      {{
+        "key": "articles_ids",
+        "value": "DEP_high_rep_docs_segment11",
+        "property": "high_representative_docs"
+      }}
+    ]
+  }},
+  {{
+    "task": "get_unique_clusters",
+    "id": "topic_clusters_segment11",
+    "dep": ["high_rep_docs_segment11"],
+    "args": [
+      {{
+        "key": "articles_ids",
+        "value": "DEP_high_rep_docs_segment11",
+        "property": "high_representative_docs"
+      }}
+    ]
+  }},
+  {{
+    "task": "get_news_topics_info",
+    "id": "topics_info_segment11",
+    "dep": ["topic_clusters_segment11"],
+    "args": [
+      {{ "key": "topics_id", "value": "DEP_topic_clusters_segment11" }}
     ]
   }}
 ]

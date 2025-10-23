@@ -1,6 +1,7 @@
 import io
 import os
 import uuid
+import pandas as pd
 from pydantic import Field
 from dotenv import load_dotenv
 from PIL import Image as PILImage
@@ -23,6 +24,16 @@ class State(TypedDict):
     validation: bool
     outputs: Dict
     response: str
+
+def make_serializable(value):
+    if isinstance(value, pd.DataFrame):
+        return value.to_dict(orient="records")
+    elif isinstance(value, (list, tuple)):
+        return [make_serializable(v) for v in value]
+    elif isinstance(value, dict):
+        return {k: make_serializable(v) for k, v in value.items()}
+    else:
+        return value
 
 # FUNCTION ARGUMENTS 
 class ArgPair(TypedDict):
@@ -58,7 +69,7 @@ class Agent:
         self.data_sources = load_prompt('1.data_sources_context')
         self.tools_planning = load_prompt('2.tools_planning')
         self.planning_prompt = self.business_context + self.data_sources + self.tools_planning
-        self.response_prompt = self.planning_prompt + load_prompt('4.response_stage')
+        self.response_prompt = self.business_context + load_prompt('4.response_stage')
         self.direct_response_prompt = self.business_context + self.data_sources + load_prompt('3.direct_response')
         self.task_planning_prompt = ChatPromptTemplate.from_messages([
             ("system", self.planning_prompt),
@@ -151,31 +162,130 @@ class Agent:
         outputs = {}
         remaining = state["plan"].copy()
 
-        def resolve_args(args_list):
+        # Define expected argument types per tool
+        TOOL_ARG_TYPES = {
+            "get_segment_description": {"segment_id": int},
+            "get_segment_engagement_stats": {"segment_id": int},
+            "get_topic_transitions": {"segment_id": int, "top_n": int},
+            "get_next_topic_prediction": {"segment_id": int, "current_topic": str, "top_n": int},
+            "get_segment_regions": {"segment_id": int, "top_n": int},
+            "get_segment_time_activity": {"segment_id": int},
+            "get_segment_activity_by_day_part": {"segment_id": int},
+            "get_segment_articles_by_time": {"segment_id": int, "start_hour": int, "end_hour": int},
+            "get_segment_engage_docs": {"segment_id": int},
+            "get_segment_not_engage_docs": {"segment_id": int},
+            "get_segment_high_rep_docs": {"segment_id": int},
+            "get_articles_info": {"articles_ids": list},
+            "get_top_recent_articles": {"articles_ids": list, "top": int},
+            "get_unique_clusters": {"articles_ids": list},
+            "get_news_topics_info": {"topics_id": list},
+            "get_news_topics_high_docs": {"topic_id": int},
+            "get_news_topics_low_docs": {"topic_id": int},
+        }
+
+        def extract_property(obj, prop_path):
+            """Safely extract nested property (supports dot notation)."""
+            try:
+                value = obj
+                for part in prop_path.split('.'):
+                    if isinstance(value, list) and part.isdigit():
+                        value = value[int(part)]
+                    else:
+                        value = value[part]
+                return value
+            except (KeyError, IndexError, TypeError):
+                raise KeyError(f"Property '{prop_path}' not found in object: {obj}")
+
+        def make_serializable(value):
+            """Recursively convert pandas/numpy objects to JSON-safe formats."""
+            if isinstance(value, pd.DataFrame):
+                return value.to_dict(orient="records")
+            elif isinstance(value, (list, tuple)):
+                return [make_serializable(v) for v in value]
+            elif isinstance(value, dict):
+                return {k: make_serializable(v) for k, v in value.items()}
+            else:
+                return value
+
+        def cast_arg(value, expected_type):
+            """Safely cast arguments according to the expected type."""
+            if expected_type is None:
+                return value
+            try:
+                if expected_type == int:
+                    return int(value)
+                elif expected_type == float:
+                    return float(value)
+                elif expected_type == bool:
+                    return bool(value)
+                elif expected_type == list and isinstance(value, str):
+                    # Try to parse a stringified list
+                    import json
+                    return json.loads(value)
+                elif expected_type == str:
+                    return str(value)
+                else:
+                    return value
+            except Exception:
+                raise ValueError(f"Failed to cast value '{value}' to {expected_type.__name__}")
+
+        def resolve_args(task):
+            """Resolve dependency references, extract properties, and cast argument types."""
+            args_list = task.get("args", [])
             resolved = {}
+
             for arg in args_list:
-                k = arg['key']
-                v = arg['value']
+                k = arg["key"]
+                v = arg["value"]
+                prop = arg.get("property")
+
+                # Check dependency
                 if isinstance(v, str) and v.startswith("DEP_"):
                     dep_task_id = v[4:]
-                    resolved[k] = outputs[dep_task_id]
+                    if dep_task_id not in outputs:
+                        raise ValueError(f"Dependency '{dep_task_id}' not yet available for argument '{k}'.")
+                    dep_output = outputs[dep_task_id]
+
+                    # Extract property if specified
+                    if prop:
+                        if not isinstance(dep_output, (dict, list)):
+                            raise TypeError(f"Cannot extract property '{prop}' from non-object output of '{dep_task_id}'.")
+                        dep_output = extract_property(dep_output, prop)
+
+                    resolved[k] = dep_output
                 else:
                     resolved[k] = v
+
+                # Apply type casting
+                expected_type = TOOL_ARG_TYPES.get(task["task"], {}).get(k)
+                if expected_type:
+                    resolved[k] = cast_arg(resolved[k], expected_type)
+
             return resolved
 
+        # Execute plan in dependency order
         while remaining:
             progress = False
             for task in remaining[:]:
-                if all(dep in outputs for dep in task['dep']):
-                    args = resolve_args(task.get('args', []))
-                    func = self.tools.TASK_FUNCS.get(task['task'])
+                if all(dep in outputs for dep in task.get("dep", [])):
+                    args = resolve_args(task)
+                    func = self.tools.TASK_FUNCS.get(task["task"])
+                    if not func:
+                        raise ValueError(f"Unknown task function: {task['task']}")
+
+                    # Execute and sanitize output
                     result = func(**args)
-                    outputs[task['id']] = result
+                    outputs[task["id"]] = make_serializable(result)
+
                     remaining.remove(task)
                     progress = True
+
             if not progress:
                 raise RuntimeError("Circular dependency or missing dependencies detected")
+
         return {"outputs": outputs}
+
+
 
     def direct_response(self, state: State):
       prompt = self.generate_direct_response_prompt.invoke({"question": state["question"]})

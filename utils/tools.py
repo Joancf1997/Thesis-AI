@@ -21,11 +21,14 @@ class Tools:
         self.news_topics = pd.DataFrame()
         with open(os.path.join(DATA_PATH, "news_topics.pkl"), "rb") as f:
             self.news_topics = pkl.load(f)
+            self.news_topics = pd.DataFrame.from_dict(data, orient="index").reset_index()
+            self.news_topics.rename(columns={'index': 'id'}, inplace=True)
 
         # Load the raw news articles data
         self.news_raw = pd.DataFrame()
-        with open(os.path.join(DATA_PATH, "news_viz.json"), "r", encoding="utf-8") as f:
-            self.news_raw = pd.DataFrame(json.load(f))
+        with open(os.path.join(DATA_PATH, "news_viz2.json"), "r", encoding="utf-8") as f:
+            self.news_raw = pd.DataFrame(json.load(f)).reset_index()
+            self.news_raw.rename(columns={'index': 'id'}, inplace=True)
         
         self.TASK_FUNCS = {
             # User Segment tools
@@ -41,12 +44,12 @@ class Tools:
             "get_segment_high_rep_docs": self.get_segment_high_rep_docs,
             "get_segment_activity_by_day_part": self.get_segment_activity_by_day_part,
 
-						# Articles topics tools
+            # Articles topics tools
             "get_articles_info": self.get_articles_info,
             "get_top_recent_articles": self.get_top_recent_articles,
             "get_unique_clusters": self.get_unique_clusters,
 
-						# Raw News topics tools
+            # Raw News topics tools
             "get_news_topics_info": self.get_news_topics_info,
             "get_news_topics_high_docs": self.get_news_topics_high_docs,
             "get_news_topics_low_docs": self.get_news_topics_low_docs
@@ -54,7 +57,7 @@ class Tools:
 
 
     # User Segment Analysis tools
-    def get_segment_description(self, segment_id) -> Dict[str, Any]:
+    def get_segment_description(self, segment_id: int) -> Dict[str, Any]:
         try:
             segment_id = int(segment_id)
         except (ValueError, TypeError):
@@ -70,7 +73,7 @@ class Tools:
             "region_consumption":  dict(df["regions"])
         }
 
-    def get_segment_engagement_stats(self, segment_id) -> Dict[str, Any]:
+    def get_segment_engagement_stats(self, segment_id: int) -> Dict[str, Any]:
         try:
             segment_id = int(segment_id)
         except (ValueError, TypeError):
@@ -80,14 +83,14 @@ class Tools:
         df = df[df["true_engagement"] == True]
         return {
             "segment_id": segment_id,
-            "avg_scroll_depth": int(df["avg_scroll_depth"].mean()),
-            "avg_engaged_secs": int(df["avg_engaged_secs"].mean()),
-            "avg_words_per_minute": int(df["avg_words_per_minute"].mean()),
-            "median_engaged_secs": int(df["avg_engaged_secs"].median()),
+            "avg_scroll_depth": round(float(df["avg_scroll_depth"].mean()), 2),
+            "avg_engaged_secs": round(float(df["avg_engaged_secs"].mean()), 2),
+            "avg_words_per_minute": round(float(df["avg_words_per_minute"].mean()), 2),
+            "median_engaged_secs": round(float(df["avg_engaged_secs"].median()), 2),
             "engagement_rate": round(len(df[df["true_engagement"] == True]) / len(df), 3)
         }
 
-    def get_topic_transitions(self, segment_id, top_n = 10) -> List[Dict[str, Any]]:
+    def get_topic_transitions(self, segment_id: int, top_n = 10) -> List[Dict[str, Any]]:
         try:
             segment_id = int(segment_id)
             top_n = int(top_n)
@@ -107,7 +110,7 @@ class Tools:
                     })
         return sorted(transitions, key=lambda x: x["probability"], reverse=True)[:top_n]
 
-    def get_next_topic_prediction(self, segment_id, current_topic, top_n = 3) -> Dict[str, Any]:
+    def get_next_topic_prediction(self, segment_id: int, current_topic: str, top_n = 3) -> Dict[str, Any]:
         try:
             segment_id = int(segment_id)
             top_n = int(top_n)
@@ -148,7 +151,7 @@ class Tools:
 
         return [{"region": r, "readers": int(v)} for r, v in sorted_regions]
 
-    def get_segment_time_activity(self, segment_id) -> Dict[str, Any]:
+    def get_segment_time_activity(self, segment_id: int) -> Dict[str, Any]:
         try:
             segment_id = int(segment_id)
         except (ValueError, TypeError):
@@ -181,7 +184,7 @@ class Tools:
         }
 
 
-    def get_segment_articles_by_time(self, segment_id, start_hour, end_hour) -> Dict[str, Any]:
+    def get_segment_articles_by_time(self, segment_id: int, start_hour: int, end_hour: int) -> Dict[str, Any]:
         try:
             segment_id = int(segment_id)
             start_hour = int(start_hour)
@@ -203,43 +206,43 @@ class Tools:
             "articles": articles_read[:10]   # Limit to 10 y now
         }
 
-    def get_segment_engage_docs(self, segment_id) -> Dict[str, Any]:
+    def get_segment_engage_docs(self, segment_id: int) -> Dict[str, Any]:
         try:
             segment_id = int(segment_id)
         except (ValueError, TypeError):
             raise ValueError(f"Invalid segment_id: {segment_id}. Must be an integer.")
         
-        docs_engage = self.user_segments.loc[segment_id, "docs_engaged"].copy()
+        docs_engage = self.user_segments.loc[segment_id, "docs_engaged"].tolist() 
         return {
             "segment_id": segment_id,
             "docs_engage": docs_engage[:10]   # Limit to 10 y now
         }
 
-    def get_segment_not_engage_docs(self, segment_id) -> Dict[str, Any]:
+    def get_segment_not_engage_docs(self, segment_id: int) -> Dict[str, Any]:
         try:
             segment_id = int(segment_id)
         except (ValueError, TypeError):
             raise ValueError(f"Invalid segment_id: {segment_id}. Must be an integer.")
         
-        docs_notengage = self.user_segments.loc[segment_id, "docs_notengaged"].copy()
+        docs_notengage = self.user_segments.loc[segment_id, "docs_notengaged"].tolist() 
         return {
             "segment_id": segment_id,
             "docs_notengage": docs_notengage[:10]   # Limit to 10 y now
         }
 
-    def get_segment_high_rep_docs(self, segment_id) -> Dict[str, Any]:
+    def get_segment_high_rep_docs(self, segment_id: int) -> Dict[str, Any]:
         try:
             segment_id = int(segment_id)
         except (ValueError, TypeError):
             raise ValueError(f"Invalid segment_id: {segment_id}. Must be an integer.")
         
-        high_docs = self.user_segments.loc[segment_id, "high_docs"].copy()
+        high_docs = self.user_segments.loc[segment_id, "high_docs"].tolist() 
         return {
             "segment_id": segment_id,
             "high_representative_docs": high_docs
         }
 
-    def get_segment_activity_by_day_part(self, segment_id) -> Dict[str, Any]:
+    def get_segment_activity_by_day_part(self, segment_id: int) -> Dict[str, Any]:
         try:
             segment_id = int(segment_id)
         except (ValueError, TypeError):
@@ -263,12 +266,13 @@ class Tools:
 
     # Article tools 
     def get_articles_info(self, articles_ids: List[str]):
-        cols = ['title', 'teaserText', 'first_publication_date']
-        return self.news_raw.loc[self.news_raw.index.intersection(articles_ids), cols]
+        cols = ['id', 'title', 'teaserText', 'first_publication_date']
+        df = self.news_raw[self.news_raw['id'].isin(articles_ids)][cols]
+        return df
 
     def get_top_recent_articles(self, articles_ids: List[str], top: int):
         cols = ['title', 'teaserText', 'first_publication_date']
-        filtered = self.news_raw.loc[self.news_raw.index.intersection(articles_ids), cols]
+        filtered = self.news_raw.loc[self.news_raw['id'].isin(articles_ids), cols]
         filtered = filtered.copy()
         filtered['first_publication_date'] = pd.to_datetime(
             filtered['first_publication_date'], unit='ms', errors='coerce'
@@ -276,7 +280,7 @@ class Tools:
         return filtered.sort_values(by='first_publication_date', ascending=False).head(top)
 
     def get_unique_clusters(self, articles_ids: List[str]):
-        filtered = self.news_raw.loc[self.news_raw.index.intersection(articles_ids)]
+        filtered = self.news_raw.loc[self.news_raw['id'].isin(articles_ids)]
         clusters = filtered['clusters'].dropna().tolist()
         unique_clusters = sorted(set([c for sublist in clusters for c in sublist]))
         return unique_clusters
@@ -285,13 +289,20 @@ class Tools:
     # News topics
     def get_news_topics_info(self, topics_id: List[int]):
         cols = ['title', 'desc']
-        return self.news_topics.loc[self.news_topics.index.intersection(topics_id), cols]
+        return self.news_topics.loc[self.news_topics['id'].isin(topics_id), cols]
 
-    def get_news_topics_high_docs(self, topic_id: int):
-        return self.news_topics.loc[topic_id]['high_docs']
+    def get_news_topics_high_docs(self, topics_id: int):
+        row = self.news_topics[self.news_topics['id'].isin(topics_id)]
+        if row.empty:
+            return None
+        return row.iloc[0]['high_docs'][:4].tolist()
 
-    def get_news_topics_low_docs(self, topic_id: int):
-        return self.news_topics.loc[topic_id]['low_docs']
+
+    def get_news_topics_low_docs(self, topics_id: int):
+        row = self.news_topics[self.news_topics['id'].isin(topics_id)]
+        if row.empty:
+            return None
+        return row.iloc[0]['low_docs'][:4].tolist()
 
 
 
