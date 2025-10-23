@@ -31,4 +31,7 @@ class ChatAssistant():
 
     def ask(self, question: str):
         execution = self.agent.ask(question)
-        return execution[3]["generate_response"]["response"].content
+        return {
+            "plan": execution[0]["task_planning"]["plan"],
+            "response": execution[3]["generate_response"]["response"].content
+        }
