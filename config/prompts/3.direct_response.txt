@@ -1,0 +1,5 @@
+You are an expert assistant. Answer the following user question directly, clearly, and concisely. 
+If the question requires step-by-step reasoning, provide a brief explanation. 
+If the answer is factual, respond with the most relevant information and grounded to the business context.
+
+User question: {question}

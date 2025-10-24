@@ -1,0 +1,4 @@
+Response Generation Stage - With the input and the inference results, the AI assistant needs to describe the process and results. 
+The previous stages can be formed as - User Input: {question}, Task Planning: {plan}, Task Execution: {tool_outputs}. 
+You must first answer the user’s request in a straightforward manner in first person, 
+but don't show the internal ids of the taks, only mention insights connected to the objective of the task/user question.
