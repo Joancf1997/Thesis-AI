@@ -1,6 +1,20 @@
 import json
 import copy
 import pandas as pd
+from typing import Dict, Any
+from utils.tools import Tools
+from .planner import TaskPlanning
+from utils.utils import load_prompt
+from typing_extensions import TypedDict
+from langchain_core.prompts import ChatPromptTemplate
+
+
+class State(TypedDict):
+    question: str
+    plan: Dict
+    validation: bool
+    outputs: Dict
+    response: str
 
 # ====================================
 #  UTILITY HELPERS
@@ -51,15 +65,17 @@ def cast_arg(value, expected_type):
     except Exception:
         raise ValueError(f"Failed to cast value '{value}' to {expected_type.__name__}")
 
-class executor:
-    def __init__(self):
-        self.run_plan
+class TaskExecutor:
+    def __init__(self, base_llm, structure_llm):
+        self.base_llm = base_llm
+        self.plan_structure_llm = structure_llm
+        self.tools = Tools()
+        self.analyze_prompt_plan = self._build_analyze_prompts() 
 
     # ====================================
     #  MAIN EXECUTION LOGIC
     # ====================================
-
-    def run_plan(self, state, tools, validator, analyzer_fn):
+    def run_plan(self, state: State):
         """
         Executes the analytical plan step by step, resolving dependencies,
         property extraction, type casting, and invoking the LLM-based analyzer
@@ -67,16 +83,12 @@ class executor:
 
         Args:
             state (dict): The shared workflow state containing the plan and question.
-            tools (Tools): The tool registry with callable analytical functions.
-            validator (callable): Function that validates a plan structure.
-            analyzer_fn (callable): Function that triggers LLM analysis and returns an updated plan.
         """
 
         outputs = {}
         plan_versions = [copy.deepcopy(state["plan"])]
         remaining = copy.deepcopy(state["plan"])
 
-        # Expected argument types per tool (so we can cast properly)
         TOOL_ARG_TYPES = {
             "get_segment_description": {"segment_id": int},
             "get_segment_engagement_stats": {"segment_id": int},
@@ -135,7 +147,7 @@ class executor:
             for task in remaining[:]:
                 if all(dep in outputs for dep in task.get("dep", [])):
                     args = resolve_args(task)
-                    func = tools.TASK_FUNCS.get(task["task"])
+                    func = self.tools.TASK_FUNCS.get(task["task"])
                     if not func:
                         raise ValueError(f"Unknown tool: {task['task']}")
 
@@ -165,14 +177,14 @@ class executor:
                         print(f"🧠 Triggering LLM analysis for '{task['id']}'...")
 
                         # Call analyzer LLM to update the plan dynamically
-                        new_plan = analyzer_fn(
+                        new_plan = self._analyze_and_update_plan(
                             question=state["question"],
                             plan=remaining,
                             latest_output=target_value,
                             previous_outputs=outputs
                         )
 
-                        validated = validator({"plan": new_plan})
+                        validated = TaskPlanning.validate_plan({"plan": new_plan})
                         if not validated.get("validation", False):
                             print("⚠️ New plan failed validation, skipping update.")
                             continue
@@ -187,3 +199,54 @@ class executor:
 
         print(f"🏁 All tasks completed. Total plan versions: {len(plan_versions)}")
         return {"outputs": outputs, "plan_versions": plan_versions}
+
+
+
+    # Plan Analyzer 
+    def _build_analyze_prompts(self) -> dict:
+        """
+        Builds the LLM prompt templates for generating responses,
+        """
+        
+        business_context = load_prompt("0.business_context")
+        data_sources = load_prompt("1.data_sources_context")
+        tools_planning = load_prompt("2.tools_planning")
+        plan_update_prompt = business_context + data_sources + tools_planning+ load_prompt("2.plan_update")
+        return ChatPromptTemplate.from_messages([
+                ("system", plan_update_prompt)
+            ])
+    
+
+    def _analyze_and_update_plan(self, question: str, plan: list, latest_output: Any, previous_outputs: dict) -> list:
+        """
+        Invokes the Analyzer LLM to interpret the latest tool output,
+        reason about what to do next, and update the remaining plan accordingly.
+        """
+
+        latest_tool_output = json.dumps(latest_output, indent=2, ensure_ascii=False)
+        full_tool_output = json.dumps(list(previous_outputs.keys()), indent=2)
+        remaining_plan = json.dumps(plan, indent=2, ensure_ascii=False)        
+        # Call the Analyzer LLM
+        try:
+            analyzer_prompt = self.analyze_prompt_plan.invoke({"question": question, 
+                                                            "latest_tool_output": latest_tool_output, 
+                                                            "full_tool_output": full_tool_output,
+                                                            "remaining_plan": remaining_plan })
+            response = self.base_llm.invoke(analyzer_prompt)
+            text = response.content if hasattr(response, "content") else str(response)
+        except Exception as e:
+            print(f"⚠️ LLM invocation failed: {e}")
+            return plan  # Fallback: continue with current plan
+
+        #  Validate JSON output
+        try:
+            updated_plan_structured = self.plan_structure_llm.invoke(text)
+            updated_plan = updated_plan_structured["plan"]
+            if not isinstance(updated_plan, list):
+                raise ValueError("Analyzer must return a list of tasks.")
+        except Exception as e:
+            print(f"⚠️ Invalid plan format returned by analyzer: {e}")
+            print(f"Raw LLM output:\n{text}")
+            return plan
+        print("🧩 Analyzer LLM produced an updated plan successfully.")
+        return updated_plan

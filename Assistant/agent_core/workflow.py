@@ -1,22 +1,18 @@
 import uuid
+from typing import Dict
 from langgraph.graph import StateGraph
+from typing_extensions import TypedDict
 from langgraph.checkpoint.memory import InMemorySaver
-from utils.utils import Settings, load_prompt
 
 # Import core modules
-from agent_core.planner import task_planning, validate_plan, validation_router
-from agent_core.executor import run_plan
-from agent_core.responder import generate_response, direct_response
-from agent_core.analyzer import build_plan_update_prompt, analyze_and_update_plan
+from .responder import Responder
+from .executor import TaskExecutor
+from .planner import TaskPlanning, validation_router
 
-from utils.tools import Tools
-
-from typing_extensions import TypedDict
-from typing import Dict
 
 
 # ==========================================================
-#  STATE DEFINITION
+#  STATE DEFINITION - Shared across all steps
 # ==========================================================
 class State(TypedDict):
     question: str
@@ -25,36 +21,16 @@ class State(TypedDict):
     outputs: Dict
     response: str
 
-# ==========================================================
-#  WORKFLOW BUILDER
-# ==========================================================
-
 class Workflow:
-    """
-    Defines the full LangGraph workflow pipeline for the ARDI Agent:
-      - Planning
-      - Validation
-      - Execution
-      - Response generation
-    """
-
-    def __init__(self, base_llm, plan_structure_llm, business_context, data_sources, tools_planning):
+    def __init__(self, base_llm, plan_structure_llm):
         self.base_llm = base_llm
         self.plan_structure_llm = plan_structure_llm
-        self.business_context = business_context
-        self.data_sources = data_sources
-        self.tools_planning = tools_planning
-
-        # Initialize tools and analyzer prompt
-        self.tools = Tools()
-        self.plan_update_prompt = build_plan_update_prompt(business_context)
-
-        # Build the graph
         self.graph = self._build_workflow()
-
-    # ------------------------------------------------------
-    #  GRAPH SETUP
-    # ------------------------------------------------------
+        
+        # Functions - Steps 
+        self.task_planning = TaskPlanning(self.plan_structure_llm)
+        self.task_executor = TaskExecutor(self.base_llm, self.plan_structure_llm)
+        self.response = Responder(self.base_llm)
 
     def _build_workflow(self):
         """
@@ -74,7 +50,6 @@ class Workflow:
         graph_builder.add_edge("task_planning", "validate_plan")
         graph_builder.add_conditional_edges("validate_plan", validation_router)
         graph_builder.add_edge("run_plan", "generate_response")
-
         # Define terminal nodes
         graph_builder.set_finish_point("generate_response")
         graph_builder.set_finish_point("direct_response")
@@ -89,40 +64,27 @@ class Workflow:
 
     def _node_task_planning(self, state: State):
         """Wrapper to call planner module."""
-        from agent_core.planner import build_planning_prompt
-        prompt = build_planning_prompt(self.business_context, self.data_sources, self.tools_planning)
-        return task_planning(state, self.base_llm, prompt, plan_schema=self.plan_structure_llm.output_schema)
-
+        return self.task_planning.task_planning(state)
+         
     def _node_validate_plan(self, state: State):
         """Wrapper to call plan validator."""
-        return validate_plan(state["plan"], self.tools.TASK_FUNCS)
+        return self.task_planning.validate_plan(state)
 
     def _node_run_plan(self, state: State):
         """Wrapper to execute plan with adaptive analysis."""
-        return run_plan(
-            state=state,
-            tools=self.tools,
-            validator=lambda s: validate_plan(s["plan"], self.tools.TASK_FUNCS),
-            analyzer_fn=lambda **kwargs: analyze_and_update_plan(
-                base_llm=self.base_llm,
-                plan_structure_llm=self.plan_structure_llm,
-                plan_update_prompt=self.plan_update_prompt,
-                **kwargs
-            )
-        )
+        return self.task_executor.run_plan(state)
 
     def _node_generate_response(self, state: State):
         """Wrapper to generate final answer from executed plan."""
-        return generate_response(self.base_llm, state)
+        return self.response.generate_response(state)
 
     def _node_direct_response(self, state: State):
         """Wrapper to handle direct LLM answer (no tools)."""
-        return direct_response(self.base_llm, state)
+        return self.response.direct_response(state)
 
     # ------------------------------------------------------
     #  ENTRYPOINT
     # ------------------------------------------------------
-
     def get_request(self, session_id: uuid.UUID):
         """
         Returns a compiled workflow request with a thread-based session.

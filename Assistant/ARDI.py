@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 
 # Internal imports
-from utils.utils import Settings, load_prompt
-from Assistant.agent_core.workflow import Workflow
-from Assistant.agent_core.agent_core.planner import Plan  
+from utils.utils import Settings
+from .agent_core.workflow import Workflow
+from .agent_core.planner import Plan  
 
 
 # ==========================================================
@@ -30,12 +30,7 @@ class Agent:
         # Initialize everything
         self._init_llms()
         self._init_workflow()
-
-        print("🤖 ARDI Agent initialized and ready for analysis!")
-
-    # ------------------------------------------------------
-    #  LLM INITIALIZATION
-    # ------------------------------------------------------
+        print("ARDI Agent ready...")
 
     def _init_llms(self):
         """Initialize both the base LLM and structured-output LLM."""
@@ -52,7 +47,6 @@ class Agent:
     # ------------------------------------------------------
     #  WORKFLOW INITIALIZATION
     # ------------------------------------------------------
-
     def _init_workflow(self):
         """Build the LangGraph workflow with all nodes connected."""
         self.workflow = Workflow(
@@ -64,20 +58,13 @@ class Agent:
         self.request, self.session_config = self.workflow.get_request(self.session_id)
 
     # ------------------------------------------------------
-    #  MAIN ENTRYPOINT
+    #  MAIN ENTRYPOINT - Capture User question
     # ------------------------------------------------------
-
     def ask(self, question: str):
         """
         Executes the full agent pipeline on a user question.
-
-        Steps:
-        1. Plan generation (LLM)
-        2. Plan validation
-        3. Plan execution with dynamic analysis (ReAct loop)
-        4. Response generation (final LLM answer)
         """
-        print(f"\n🧠 User question: {question}\n")
+        print(f"User question: {question}\n")
         execution_trace = []
 
         for step in self.request.stream(
