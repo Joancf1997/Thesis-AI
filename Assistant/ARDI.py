@@ -65,7 +65,7 @@ class Agent:
         Executes the full agent pipeline on a user question.
         """
         print(f"User question: {question}\n")
-        execution_trace = []
+        execution_result = {}
 
         for step in self.request.stream(
             {"question": question},
@@ -73,7 +73,8 @@ class Agent:
             stream_mode="updates"
         ):
             print(f"📍 Step update: {step}")
-            execution_trace.append(step)
+            key = list(step.keys())[0]         
+            execution_result[key] = step[key]
 
         print("\n✅ Agent pipeline finished successfully!\n")
-        return execution_trace
+        return execution_result 

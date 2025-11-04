@@ -31,4 +31,24 @@ class ChatAssistant():
 
     def ask(self, question: str):
         execution = self.agent.ask(question)
-        return execution
+
+        # Extract relevant information to the user 
+        # Response 
+        resp_obj = execution.get("direct_response") or execution.get("generate_response")
+        response_text = None
+        if resp_obj:
+            response_text = resp_obj["response"].content 
+            
+        # Outputs - Grounded base for the answer 
+        run_plan = execution.get("run_plan")
+        plan_outputs = []
+        if run_plan:
+            for output in run_plan["outputs"]:
+                plan_outputs.append(run_plan["outputs"][output]) 
+
+        response = {
+            "plan": execution.get("task_planning"),
+            "response": response_text,
+            "outputs": plan_outputs
+        }
+        return response
