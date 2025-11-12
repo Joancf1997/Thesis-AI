@@ -4,9 +4,12 @@ import pandas as pd
 from typing import Dict, Any
 from utils.tools import Tools
 from .planner import TaskPlanning
+from sqlalchemy.orm import Session
 from utils.utils import load_prompt
 from typing_extensions import TypedDict
 from langchain_core.prompts import ChatPromptTemplate
+from crud.step import create_step, update_step
+from crud.tool import create_tool_call, update_tool_call
 
 
 class State(TypedDict):
@@ -75,7 +78,7 @@ class TaskExecutor:
     # ====================================
     #  MAIN EXECUTION LOGIC
     # ====================================
-    def run_plan(self, state: State):
+    def run_plan(self, db: Session, state: State):
         """
         Executes the analytical plan step by step, resolving dependencies,
         property extraction, type casting, and invoking the LLM-based analyzer
@@ -85,6 +88,12 @@ class TaskExecutor:
             state (dict): The shared workflow state containing the plan and question.
         """
 
+        step = create_step(
+            db=db,
+            run_id=state["run_id"],
+            name="Plan Execution",
+            input_data=state["plan"]
+        )
         outputs = {}
         plan_versions = [copy.deepcopy(state["plan"])]
         remaining = copy.deepcopy(state["plan"])
@@ -123,6 +132,12 @@ class TaskExecutor:
                 if isinstance(v, str) and v.startswith("DEP_"):
                     dep_task_id = v[4:]
                     if dep_task_id not in outputs:
+                        update_step(
+                            db=db,
+                            step_id=step.id,
+                            status="Error",
+                            output_data=f"Dependency '{dep_task_id}' not yet available for argument '{k}'."
+                        )
                         raise ValueError(f"Dependency '{dep_task_id}' not yet available for argument '{k}'.")
                     dep_output = outputs[dep_task_id]
                     if prop:
@@ -149,11 +164,29 @@ class TaskExecutor:
                     args = resolve_args(task)
                     func = self.tools.TASK_FUNCS.get(task["task"])
                     if not func:
+                        update_step(
+                            db=db,
+                            step_id=step.id,
+                            status="Error",
+                            output_data=f"Unknown tool: {task['task']}"
+                        )
                         raise ValueError(f"Unknown tool: {task['task']}")
 
                     # Execute the tool
+                    tool_call = create_tool_call(
+                        db=db,
+                        step_id=step.id,
+                        tool_name=task["task"],
+                        input_data=args
+                    )
                     result = func(**args)
                     result_serializable = make_serializable(result)
+                    update_tool_call(
+                        db=db,
+                        tool_call_id=tool_call.id,
+                        status="success",
+                        output_data=result_serializable
+                    )
                     outputs[task["id"]] = result_serializable
                     remaining.remove(task)
                     progress = True
@@ -184,7 +217,7 @@ class TaskExecutor:
                             previous_outputs=outputs
                         )
 
-                        validated = TaskPlanning.validate_plan({"plan": new_plan})
+                        validated = TaskPlanning.validate_plan(db, state)
                         if not validated.get("validation", False):
                             print("⚠️ New plan failed validation, skipping update.")
                             continue
@@ -195,9 +228,21 @@ class TaskExecutor:
                         break  # restart loop with updated plan
 
             if not progress:
+                update_step(
+                    db=db,
+                    step_id=step.id,
+                    status="Error",
+                    output_data=f"Circular dependency or unresolved dependencies detected."
+                )
                 raise RuntimeError("Circular dependency or unresolved dependencies detected.")
 
         print(f"🏁 All tasks completed. Total plan versions: {len(plan_versions)}")
+        update_step(
+            db=db,
+            step_id=step.id,
+            status="Completed",
+            output_data={"outputs": outputs, "plan_versions": plan_versions}
+        )
         return {"outputs": outputs, "plan_versions": plan_versions}
 
 

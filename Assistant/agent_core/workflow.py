@@ -1,5 +1,6 @@
 import uuid
 from typing import Dict
+from sqlalchemy.orm import Session
 from langgraph.graph import StateGraph
 from typing_extensions import TypedDict
 from langgraph.checkpoint.memory import InMemorySaver
@@ -15,6 +16,8 @@ from .planner import TaskPlanning, validation_router
 #  STATE DEFINITION - Shared across all steps
 # ==========================================================
 class State(TypedDict):
+    thread_id: str
+    run_id: str
     question: str
     plan: Dict
     validation: bool
@@ -25,12 +28,16 @@ class Workflow:
     def __init__(self, base_llm, plan_structure_llm):
         self.base_llm = base_llm
         self.plan_structure_llm = plan_structure_llm
+        self.db = None
         self.graph = self._build_workflow()
         
         # Functions - Steps 
         self.task_planning = TaskPlanning(self.plan_structure_llm)
         self.task_executor = TaskExecutor(self.base_llm, self.plan_structure_llm)
         self.response = Responder(self.base_llm)
+
+    def set_db(self, db: Session):
+        self.db = db
 
     def _build_workflow(self):
         """
@@ -64,30 +71,20 @@ class Workflow:
 
     def _node_task_planning(self, state: State):
         """Wrapper to call planner module."""
-        return self.task_planning.task_planning(state)
+        return self.task_planning.task_planning(self.db, state)
          
     def _node_validate_plan(self, state: State):
         """Wrapper to call plan validator."""
-        return self.task_planning.validate_plan(state)
+        return self.task_planning.validate_plan(self.db, state)
 
     def _node_run_plan(self, state: State):
         """Wrapper to execute plan with adaptive analysis."""
-        return self.task_executor.run_plan(state)
+        return self.task_executor.run_plan(self.db, state)
 
     def _node_generate_response(self, state: State):
         """Wrapper to generate final answer from executed plan."""
-        return self.response.generate_response(state)
+        return self.response.generate_response(self.db, state)
 
     def _node_direct_response(self, state: State):
         """Wrapper to handle direct LLM answer (no tools)."""
-        return self.response.direct_response(state)
-
-    # ------------------------------------------------------
-    #  ENTRYPOINT
-    # ------------------------------------------------------
-    def get_request(self, session_id: uuid.UUID):
-        """
-        Returns a compiled workflow request with a thread-based session.
-        """
-        session_config = {"configurable": {"thread_id": str(session_id)}}
-        return self.graph, session_config
+        return self.response.direct_response(self.db, state)

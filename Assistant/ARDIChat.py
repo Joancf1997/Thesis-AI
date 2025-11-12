@@ -2,7 +2,14 @@ import os
 import uuid
 import logging
 from .ARDI import Agent
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 from utils.utils import load_config, Settings
+from crud.message import create_human_message, create_assistant_message
+
+class Question(BaseModel):
+    question: str
+    thread_id: str
 
 def configure_logging():
     logger = logging.getLogger()
@@ -23,14 +30,12 @@ class ChatAssistant():
         base_dir = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(base_dir, "../config/settings.yaml")
         settings = Settings(**load_config(config_path))
-        # init_db()
-        # self.db = SessionLocal()
-        user_id = uuid.uuid4()
-        session_id = uuid.uuid4()
-        self.agent = Agent(settings, user_id, session_id)
+        self.agent = Agent(settings)
 
-    def ask(self, question: str):
-        execution = self.agent.ask(question)
+    def ask(self, db: Session,  question: Question):
+        human_msg = create_human_message(db, thread_id=question.thread_id, content=question.question)
+        print(human_msg.content)
+        execution = self.agent.ask(db, human_msg)
 
         # Extract relevant information to the user 
         # Response 
@@ -45,7 +50,8 @@ class ChatAssistant():
         if run_plan:
             for output in run_plan["outputs"]:
                 plan_outputs.append(run_plan["outputs"][output]) 
-
+        
+        create_assistant_message(db, thread_id=question.thread_id, content=response_text)
         response = {
             "plan": execution.get("task_planning"),
             "response": response_text,

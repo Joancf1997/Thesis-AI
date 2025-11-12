@@ -1,8 +1,10 @@
 import json
 from typing import Dict
-from typing_extensions import TypedDict
+from sqlalchemy.orm import Session
 from utils.utils import load_prompt 
+from typing_extensions import TypedDict
 from langchain_core.prompts import ChatPromptTemplate
+from crud.step import create_step, update_step
 
 class State(TypedDict):
     question: str
@@ -34,11 +36,21 @@ class Responder():
             ])
         ]
 
-    def generate_response(self, state: State):
+    def generate_response(self, db: Session, state: State):
         """
         Combines the user question, plan, and tool outputs
         into a final natural-language answer.
         """
+        step = create_step(
+            db=db,
+            run_id=state["run_id"],
+            name="Response Generation",
+            input_data={
+                "question": state["question"],
+                "plan": json.dumps(state["plan"], indent=2, ensure_ascii=False),
+                "tool_outputs": json.dumps(state["outputs"], indent=2, ensure_ascii=False)
+            }
+        )
         try:
             prompt = self.generate_response_prompt.invoke({
                 "question": state["question"],
@@ -46,20 +58,48 @@ class Responder():
                 "tool_outputs": json.dumps(state["outputs"], indent=2, ensure_ascii=False)
             })
             response = self.base_llm.invoke(prompt)
+            update_step(
+                db=db,
+                step_id=step.id,
+                status="Completed",
+                output_data={"response": response.content}
+            )
             return {"response": response}
         except Exception as e:
+            update_step(
+                db=db,
+                step_id=step.id,
+                status="Error",
+            )
             print(f"⚠️ Error generating response: {e}")
             return {"response": f"An error occurred while generating the final response: {str(e)}"}
 
-    def direct_response(self, state: State):
+    def direct_response(self, db: Session, state: State):
         """
         Handles questions that do not require tool execution.
         Produces a direct natural-language answer using only the context.
         """
         try:
+            step = create_step(
+                db=db,
+                run_id=state["run_id"],
+                name="Direct Response",
+                input_data=state["question"]
+            )
             prompt = self.direct_response_prompt.invoke({"question": state["question"]})
             response = self.base_llm.invoke(prompt)
+            update_step(
+                db=db,
+                step_id=step.id,
+                status="Completed",
+                output_data={"response": response.content}
+            )
             return {"response": response}
         except Exception as e:
+            update_step(
+                db=db,
+                step_id=step.id,
+                status="Error",
+            )
             print(f"⚠️ Error generating direct response: {e}")
             return {"response": f"An error occurred while generating the direct response: {str(e)}"}

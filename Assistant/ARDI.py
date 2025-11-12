@@ -1,6 +1,8 @@
 import os
 import uuid
+from pydantic import BaseModel
 from dotenv import load_dotenv
+from sqlalchemy.orm import Session
 from langchain.chat_models import init_chat_model
 
 # Internal imports
@@ -8,6 +10,7 @@ from utils.utils import Settings
 from .agent_core.workflow import Workflow
 from .agent_core.planner import Plan  
 
+from crud.run import create_run, end_run
 
 # ==========================================================
 #  ARDI AGENT
@@ -18,13 +21,11 @@ class Agent:
     It handles initialization, configuration, and user question resolution.
     """
 
-    def __init__(self, settings: Settings, user_id: uuid.UUID, session_id: uuid.UUID):
+    def __init__(self, settings: Settings):
         load_dotenv()
 
         # Session & config
         self.settings = settings
-        self.user_id = user_id
-        self.session_id = session_id
         self.llm_config = settings.llm
 
         # Initialize everything
@@ -53,28 +54,38 @@ class Agent:
             base_llm=self.base_llm,
             plan_structure_llm=self.plan_structure_llm
         )
-
-        # Compiled workflow + session configuration
-        self.request, self.session_config = self.workflow.get_request(self.session_id)
+        self.request = self.workflow.graph
 
     # ------------------------------------------------------
     #  MAIN ENTRYPOINT - Capture User question
     # ------------------------------------------------------
-    def ask(self, question: str):
+    def ask(self, db: Session, message_obj):
         """
         Executes the full agent pipeline on a user question.
         """
-        print(f"User question: {question}\n")
+
+        thread_id = message_obj.thread_id
+        message_content = message_obj.content
+        session_config = {"configurable": {"thread_id": str(thread_id)}}
+        print(f"User question: {message_content}\n")
         execution_result = {}
 
+        run = create_run(db, message_obj.id)
+        self.workflow.set_db(db)
+        state = {
+            "question": message_content, 
+            "thread_id": thread_id,
+            "run_id": run.id
+        }
         for step in self.request.stream(
-            {"question": question},
-            self.session_config,
+            state,
+            session_config,
             stream_mode="updates"
         ):
             print(f"📍 Step update: {step}")
             key = list(step.keys())[0]         
             execution_result[key] = step[key]
-
+        
+        end_run(db, run.id)
         print("\n✅ Agent pipeline finished successfully!\n")
         return execution_result 

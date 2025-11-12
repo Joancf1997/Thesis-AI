@@ -1,9 +1,11 @@
 from pydantic import Field
 from utils.tools import Tools
+from sqlalchemy.orm import Session
 from utils.utils import load_prompt
 from typing import List, Optional, Dict
 from typing_extensions import TypedDict
 from langchain_core.prompts import ChatPromptTemplate
+from crud.step import create_step, update_step
 
 class State(TypedDict):
     question: str
@@ -49,21 +51,40 @@ class TaskPlanning:
         ])
 
 
-    def task_planning(self, state: State):
+    def task_planning(self, db: Session, state: State):
         """
         Uses the planning LLM to generate a structured plan from a user question.
         """
+        step = create_step(
+            db=db,
+            run_id=state["run_id"],
+            name="Planning",
+            input_data=state["question"]
+        )
         try:
             prompt = self.planning_prompt.invoke({"question": state["question"]})
             result = self.plan_structure_llm.invoke(prompt)
+            update_step(
+                db=db,
+                step_id=step.id,
+                status="Completed",
+                output_data=result
+            )
             print("🧩 Plan generated successfully.")
+            if result == "{}":
+                return []
             return {"plan": result["plan"]}
         except Exception as e:
             print(f"⚠️ Error generating task plan: {e}")
+            update_step(
+                db=db,
+                step_id=step.id,
+                status="Error",
+            )
             return {"plan": []}
 
     @staticmethod
-    def validate_plan(state: State):
+    def validate_plan(db: Session, state: State):
         """
         Validate that the plan conforms to the required structure and logic.
         Ensures:
@@ -72,6 +93,12 @@ class TaskPlanning:
         - All tools are valid
         - Proper field types
         """
+        step = create_step(
+            db=db,
+            run_id=state["run_id"],
+            name="Plan Validation",
+            input_data=state["plan"]
+        )
         tools = Tools()
         task_ids = set()
         errors = []
@@ -111,9 +138,21 @@ class TaskPlanning:
             print("❌ Plan validation failed:")
             for e in errors:
                 print(f"   - {e}")
+            update_step(
+                db=db,
+                step_id=step.id,
+                status="Completed",
+                output_data={"validation": False, "errors": errors}
+            )
             return {"validation": False, "errors": errors}
 
         print("✅ Plan validation passed.")
+        update_step(
+            db=db,
+            step_id=step.id,
+            status="Completed",
+            output_data={"validation": True, "errors": []}
+        )
         return {"validation": True, "errors": []}
 
 
