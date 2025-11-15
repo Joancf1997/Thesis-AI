@@ -16,6 +16,7 @@ class Message(Base):
     thread_id = Column(UUID(as_uuid=True), ForeignKey("threads.id"))
     role = Column(String)  # "user" or "assistant"
     content = Column(Text)
+    response_to = Column(UUID(as_uuid=True))
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

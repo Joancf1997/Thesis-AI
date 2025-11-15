@@ -173,7 +173,7 @@ Your output must be a JSON array of tasks, where each task represents one tool c
 
   {{
     "name": "get_segment_articles_by_time",
-    "objective": "Retrieve articles read by a user segment in a specific time window.",
+    "objective": "Retrieve articles read by a user segment in a specific time window. (start_hour and end_hour cant be the same time, should be at least one hour difference ex: start_hour:7 - end_hour:8, start_hour:15 - end_hour:16. NO:  start_hour:14 - end_hour:14)",
     "arguments": [
       {{ "name": "segment_id", "type": "integer" }},
       {{ "name": "start_hour", "type": "integer" }},
@@ -282,22 +282,18 @@ Your output must be a JSON array of tasks, where each task represents one tool c
     "name": "get_news_topics_high_docs",
     "objective": "Retrieve the most relevant/high-documents in a topic.",
     "arguments": [
-      {{ "name": "topic_id", "type": "integer" }}
+      {{ "name": "topics_id", "type": "list[integer]" }}
     ],
-    "output": {{
-      "high_docs": "list[string]"
-    }}
+    "output": "list[string]"
   }},
 
   {{
     "name": "get_news_topics_low_docs",
     "objective": "Retrieve the least relevant/low-documents in a topic.",
     "arguments": [
-      {{ "name": "topic_id", "type": "integer" }}
+      {{ "name": "topics_id", "type": "list[integer]" }}
     ],
-    "output": {{
-      "low_docs": "list[string]"
-    }}
+    "output": "list[string]"
   }}
 ]
 
@@ -599,3 +595,17 @@ Show me the reading activity by hour for segment 11.
     ]
   }}
 ]
+
+---
+### Example 9
+During what part of the day does segment 5 read the most?
+{{
+    "task": "get_segment_activity_by_day_part",
+    "id": "day_part_activity_seg5",
+    "analyze_answer": false,
+    "analyze_target_property": "peak_day_part",
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "5" }}
+    ]
+  }},

@@ -267,17 +267,29 @@ class Tools:
     # Article tools 
     def get_articles_info(self, articles_ids: List[str]):
         cols = ['id', 'title', 'teaserText', 'first_publication_date']
-        df = self.news_raw[self.news_raw['id'].isin(articles_ids)][cols]
+        df = self.news_raw[self.news_raw['id'].isin(articles_ids)][cols].copy()
+        # Convert to datetime safely (if numeric timestamps)
+        df['first_publication_date'] = pd.to_datetime(
+            df['first_publication_date'], unit='ms', errors='coerce'
+        )
+        # Convert to ISO-formatted string (safe for JSON serialization)
+        df['first_publication_date'] = df['first_publication_date'].dt.strftime('%Y-%m-%d %H:%M:%S')
         return df
+
 
     def get_top_recent_articles(self, articles_ids: List[str], top: int):
         cols = ['title', 'teaserText', 'first_publication_date']
         filtered = self.news_raw.loc[self.news_raw['id'].isin(articles_ids), cols]
         filtered = filtered.copy()
+        # Convert to datetime safely
         filtered['first_publication_date'] = pd.to_datetime(
             filtered['first_publication_date'], unit='ms', errors='coerce'
         )
+        # Convert Timestamp to string (ISO 8601)
+        filtered['first_publication_date'] = filtered['first_publication_date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        # Sort and return
         return filtered.sort_values(by='first_publication_date', ascending=False).head(top)
+
 
     def get_unique_clusters(self, articles_ids: List[str]):
         filtered = self.news_raw.loc[self.news_raw['id'].isin(articles_ids)]
@@ -291,14 +303,14 @@ class Tools:
         cols = ['title', 'desc']
         return self.news_topics.loc[self.news_topics['id'].isin(topics_id), cols]
 
-    def get_news_topics_high_docs(self, topics_id: int):
+    def get_news_topics_high_docs(self, topics_id: List[int]):
         row = self.news_topics[self.news_topics['id'].isin(topics_id)]
         if row.empty:
             return None
         return row.iloc[0]['high_docs'][:4].tolist()
 
 
-    def get_news_topics_low_docs(self, topics_id: int):
+    def get_news_topics_low_docs(self, topics_id: List[int]):
         row = self.news_topics[self.news_topics['id'].isin(topics_id)]
         if row.empty:
             return None

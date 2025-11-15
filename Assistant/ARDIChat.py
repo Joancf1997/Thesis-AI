@@ -42,7 +42,7 @@ class ChatAssistant():
         resp_obj = execution.get("direct_response") or execution.get("generate_response")
         response_text = None
         if resp_obj:
-            response_text = resp_obj["response"].content 
+            response_text = resp_obj["response"] 
             
         # Outputs - Grounded base for the answer 
         run_plan = execution.get("run_plan")
@@ -51,10 +51,13 @@ class ChatAssistant():
             for output in run_plan["outputs"]:
                 plan_outputs.append(run_plan["outputs"][output]) 
         
-        create_assistant_message(db, thread_id=question.thread_id, content=response_text)
+        create_assistant_message(db, thread_id=question.thread_id, content=response_text, resp_msg_id=human_msg.id)
         response = {
-            "plan": execution.get("task_planning"),
             "response": response_text,
             "outputs": plan_outputs
         }
         return response
+    
+    def evaluate_dataset(self, db: Session):
+        self.agent.process_dataset_entries(db)
+        return "Finish dataset evaluation"

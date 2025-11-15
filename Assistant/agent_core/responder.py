@@ -46,60 +46,78 @@ class Responder():
             run_id=state["run_id"],
             name="Response Generation",
             input_data={
-                "question": state["question"],
-                "plan": json.dumps(state["plan"], indent=2, ensure_ascii=False),
-                "tool_outputs": json.dumps(state["outputs"], indent=2, ensure_ascii=False)
+                "question": state.get("question", ""),
+                "plan": json.dumps(state.get("plan", {}), indent=2, ensure_ascii=False),
+                "tool_outputs": json.dumps(state.get("outputs", {}), indent=2, ensure_ascii=False)
             }
         )
+
         try:
             prompt = self.generate_response_prompt.invoke({
-                "question": state["question"],
-                "plan": json.dumps(state["plan"], indent=2, ensure_ascii=False),
-                "tool_outputs": json.dumps(state["outputs"], indent=2, ensure_ascii=False)
+                "question": state.get("question", ""),
+                "plan": json.dumps(state.get("plan", {}), indent=2, ensure_ascii=False),
+                "tool_outputs": json.dumps(state.get("outputs", {}), indent=2, ensure_ascii=False)
             })
+
             response = self.base_llm.invoke(prompt)
+
             update_step(
                 db=db,
                 step_id=step.id,
                 status="Completed",
                 output_data={"response": response.content}
             )
-            return {"response": response}
+
+            return {"response": response.content}
+
         except Exception as e:
+            print(f"⚠️ Error generating final response: {e}")
             update_step(
                 db=db,
                 step_id=step.id,
                 status="Error",
+                output_data={"error": str(e)}
             )
-            print(f"⚠️ Error generating response: {e}")
-            return {"response": f"An error occurred while generating the final response: {str(e)}"}
+            # Re-raise to stop workflow
+            raise RuntimeError(f"Response generation failed: {e}") from e
+
 
     def direct_response(self, db: Session, state: State):
         """
         Handles questions that do not require tool execution.
         Produces a direct natural-language answer using only the context.
         """
+        step = create_step(
+            db=db,
+            run_id=state["run_id"],
+            name="Direct Response",
+            input_data=state.get("question", "")
+        )
+
         try:
-            step = create_step(
-                db=db,
-                run_id=state["run_id"],
-                name="Direct Response",
-                input_data=state["question"]
-            )
-            prompt = self.direct_response_prompt.invoke({"question": state["question"]})
+            prompt = self.direct_response_prompt.invoke({
+                "question": state.get("question", "")
+            })
+
             response = self.base_llm.invoke(prompt)
+
             update_step(
                 db=db,
                 step_id=step.id,
                 status="Completed",
                 output_data={"response": response.content}
             )
-            return {"response": response}
+
+            return {"response": response.content}
+
         except Exception as e:
+            print(f"⚠️ Error generating direct response: {e}")
             update_step(
                 db=db,
                 step_id=step.id,
                 status="Error",
+                output_data={"error": str(e)}
             )
-            print(f"⚠️ Error generating direct response: {e}")
-            return {"response": f"An error occurred while generating the direct response: {str(e)}"}
+            # Re-raise to stop workflow
+            raise RuntimeError(f"Direct response generation failed: {e}") from e
+

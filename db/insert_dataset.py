@@ -72,4 +72,4 @@ def insert_dataset_from_json(json_path: str, db_url: str = "postgresql://joseand
         session.close()
 
 
-insert_dataset_from_json("/Users/joseandres/Documents/Thesis/Thesis-AI/datasets/evaluation_dataset.json")
+# insert_dataset_from_json("/Users/joseandres/Documents/Thesis/Thesis-AI/datasets/evaluation_dataset.json")

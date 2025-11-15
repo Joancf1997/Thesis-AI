@@ -1,5 +1,7 @@
 import json
 import copy
+import datetime
+import numpy as np
 import pandas as pd
 from typing import Dict, Any
 from utils.tools import Tools
@@ -22,18 +24,27 @@ class State(TypedDict):
 # ====================================
 #  UTILITY HELPERS
 # ====================================
-
 def make_serializable(value):
-    """Recursively convert pandas/numpy objects to JSON-safe formats."""
+    """Recursively convert pandas/numpy/datetime objects to JSON-safe formats."""
     if isinstance(value, pd.DataFrame):
         return value.to_dict(orient="records")
-    elif isinstance(value, (list, tuple)):
+    elif isinstance(value, (list, tuple, set)):
         return [make_serializable(v) for v in value]
     elif isinstance(value, dict):
         return {k: make_serializable(v) for k, v in value.items()}
-    else:
+    elif isinstance(value, (pd.Timestamp, datetime.datetime, datetime.date)):
+        return value.isoformat()
+    elif isinstance(value, (np.integer,)):
+        return int(value)
+    elif isinstance(value, (np.floating,)):
+        return float(value)
+    elif isinstance(value, (np.ndarray,)):
+        return value.tolist()
+    elif value is None or isinstance(value, (str, int, float, bool)):
         return value
-
+    else:
+        # Fallback: convert unknown objects to string
+        return str(value)
 
 def extract_property(obj, prop_path):
     """Safely extract nested property (supports dot notation and list indices)."""
@@ -83,167 +94,188 @@ class TaskExecutor:
         Executes the analytical plan step by step, resolving dependencies,
         property extraction, type casting, and invoking the LLM-based analyzer
         when 'analyze_answer' is set to True.
-
-        Args:
-            state (dict): The shared workflow state containing the plan and question.
         """
-
         step = create_step(
             db=db,
             run_id=state["run_id"],
             name="Plan Execution",
             input_data=state["plan"]
         )
-        outputs = {}
-        plan_versions = [copy.deepcopy(state["plan"])]
-        remaining = copy.deepcopy(state["plan"])
 
-        TOOL_ARG_TYPES = {
-            "get_segment_description": {"segment_id": int},
-            "get_segment_engagement_stats": {"segment_id": int},
-            "get_topic_transitions": {"segment_id": int, "top_n": int},
-            "get_next_topic_prediction": {"segment_id": int, "current_topic": str, "top_n": int},
-            "get_segment_regions": {"segment_id": int, "top_n": int},
-            "get_segment_time_activity": {"segment_id": int},
-            "get_segment_activity_by_day_part": {"segment_id": int},
-            "get_segment_articles_by_time": {"segment_id": int, "start_hour": int, "end_hour": int},
-            "get_segment_engage_docs": {"segment_id": int},
-            "get_segment_not_engage_docs": {"segment_id": int},
-            "get_segment_high_rep_docs": {"segment_id": int},
-            "get_articles_info": {"articles_ids": list},
-            "get_top_recent_articles": {"articles_ids": list, "top": int},
-            "get_unique_clusters": {"articles_ids": list},
-            "get_news_topics_info": {"topics_id": list},
-            "get_news_topics_high_docs": {"topic_id": int},
-            "get_news_topics_low_docs": {"topic_id": int},
-        }
+        try:
+            outputs = {}
+            plan_versions = [copy.deepcopy(state["plan"])]
+            remaining = copy.deepcopy(state["plan"])
 
-        def resolve_args(task):
-            """Resolve dependency references, extract properties, and cast types."""
-            args_list = task.get("args", [])
-            resolved = {}
+            TOOL_ARG_TYPES = {
+                "get_segment_description": {"segment_id": int},
+                "get_segment_engagement_stats": {"segment_id": int},
+                "get_topic_transitions": {"segment_id": int, "top_n": int},
+                "get_next_topic_prediction": {"segment_id": int, "current_topic": str, "top_n": int},
+                "get_segment_regions": {"segment_id": int, "top_n": int},
+                "get_segment_time_activity": {"segment_id": int},
+                "get_segment_activity_by_day_part": {"segment_id": int},
+                "get_segment_articles_by_time": {"segment_id": int, "start_hour": int, "end_hour": int},
+                "get_segment_engage_docs": {"segment_id": int},
+                "get_segment_not_engage_docs": {"segment_id": int},
+                "get_segment_high_rep_docs": {"segment_id": int},
+                "get_articles_info": {"articles_ids": list},
+                "get_top_recent_articles": {"articles_ids": list, "top": int},
+                "get_unique_clusters": {"articles_ids": list},
+                "get_news_topics_info": {"topics_id": list},
+                "get_news_topics_high_docs": {"topics_id": list},
+                "get_news_topics_low_docs": {"topics_id": list},
+            }
 
-            for arg in args_list:
-                k = arg["key"]
-                v = arg["value"]
-                prop = arg.get("property")
+            def resolve_args(task):
+                """Resolve dependency references, extract properties, and cast types."""
+                args_list = task.get("args", [])
+                resolved = {}
 
-                # Resolve dependency
-                if isinstance(v, str) and v.startswith("DEP_"):
-                    dep_task_id = v[4:]
-                    if dep_task_id not in outputs:
-                        update_step(
+                for arg in args_list:
+                    k = arg["key"]
+                    v = arg["value"]
+                    prop = arg.get("property")
+
+                    # Resolve dependency
+                    if isinstance(v, str) and v.startswith("DEP_"):
+                        dep_task_id = v[4:]
+                        if dep_task_id not in outputs:
+                            update_step(
+                                db=db,
+                                step_id=step.id,
+                                status="Error",
+                                output_data={"outputs": f"Dependency '{dep_task_id}' not yet available for argument '{k}'."}
+                            )
+                            raise ValueError(f"Dependency '{dep_task_id}' not yet available for argument '{k}'.")
+                        dep_output = outputs[dep_task_id]
+                        if prop:
+                            dep_output = extract_property(dep_output, prop)
+                        resolved[k] = dep_output
+                    else:
+                        resolved[k] = v
+
+                    # Type casting
+                    expected_type = TOOL_ARG_TYPES.get(task["task"], {}).get(k)
+                    if expected_type:
+                        resolved[k] = cast_arg(resolved[k], expected_type)
+
+                return resolved
+
+            # =========================================
+            #  MAIN EXECUTION LOOP
+            # =========================================
+            while remaining:
+                progress = False
+
+                for task in remaining[:]:
+                    if all(dep in outputs for dep in task.get("dep", [])):
+                        args = resolve_args(task)
+                        func = self.tools.TASK_FUNCS.get(task["task"])
+                        if not func:
+                            update_step(
+                                db=db,
+                                step_id=step.id,
+                                status="Error",
+                                output_data={"outputs": f"Unknown tool: {task['task']}"}
+                            )
+                            raise ValueError(f"Unknown tool: {task['task']}")
+
+                        # Execute the tool
+                        tool_call = create_tool_call(
                             db=db,
                             step_id=step.id,
-                            status="Error",
-                            output_data=f"Dependency '{dep_task_id}' not yet available for argument '{k}'."
+                            tool_name=task["task"],
+                            input_data=args
                         )
-                        raise ValueError(f"Dependency '{dep_task_id}' not yet available for argument '{k}'.")
-                    dep_output = outputs[dep_task_id]
-                    if prop:
-                        dep_output = extract_property(dep_output, prop)
-                    resolved[k] = dep_output
-                else:
-                    resolved[k] = v
 
-                # Type casting
-                expected_type = TOOL_ARG_TYPES.get(task["task"], {}).get(k)
-                if expected_type:
-                    resolved[k] = cast_arg(resolved[k], expected_type)
+                        try:
+                            result = func(**args)
+                            result_serializable = make_serializable(result)
+                            update_tool_call(
+                                db=db,
+                                tool_call_id=tool_call.id,
+                                status="success",
+                                output_data={"output": make_serializable(result)}
+                            )
+                        except Exception as e:
+                            update_tool_call(
+                                db=db,
+                                tool_call_id=tool_call.id,
+                                status="error",
+                                output_data={"error": str(e)}
+                            )
+                            raise RuntimeError(f"Tool '{task['task']}' execution failed: {e}") from e
 
-            return resolved
+                        outputs[task["id"]] = result_serializable
+                        remaining.remove(task)
+                        progress = True
+                        print(f"✅ Executed: {task['task']} | ID: {task['id']}")
 
-        # =========================================
-        #  MAIN EXECUTION LOOP
-        # =========================================
-        while remaining:
-            progress = False
+                        # --------------------------------
+                        #  Handle analyze_answer flag
+                        # --------------------------------
+                        if task.get("analyze_answer", False):
+                            target_prop = task.get("analyze_target_property")
+                            if target_prop:
+                                try:
+                                    target_value = extract_property(result_serializable, target_prop)
+                                except Exception as e:
+                                    print(f"⚠️ Could not extract property '{target_prop}': {e}")
+                                    target_value = result_serializable
+                            else:
+                                target_value = result_serializable
 
-            for task in remaining[:]:
-                if all(dep in outputs for dep in task.get("dep", [])):
-                    args = resolve_args(task)
-                    func = self.tools.TASK_FUNCS.get(task["task"])
-                    if not func:
-                        update_step(
-                            db=db,
-                            step_id=step.id,
-                            status="Error",
-                            output_data=f"Unknown tool: {task['task']}"
-                        )
-                        raise ValueError(f"Unknown tool: {task['task']}")
+                            print(f"🧠 Triggering LLM analysis for '{task['id']}'...")
 
-                    # Execute the tool
-                    tool_call = create_tool_call(
+                            new_plan = self._analyze_and_update_plan(
+                                question=state["question"],
+                                plan=remaining,
+                                latest_output=target_value,
+                                previous_outputs=outputs
+                            )
+
+                            validated = TaskPlanning.validate_plan(db, state)
+                            if not validated.get("validation", False):
+                                print("⚠️ New plan failed validation, skipping update.")
+                                continue
+
+                            plan_versions.append(copy.deepcopy(new_plan))
+                            print(f"🔄 Plan updated → version {len(plan_versions)}")
+                            remaining = copy.deepcopy(new_plan)
+                            break  # restart loop with updated plan
+
+                if not progress:
+                    update_step(
                         db=db,
                         step_id=step.id,
-                        tool_name=task["task"],
-                        input_data=args
+                        status="Error",
+                        output_data={"outputs": f"Circular dependency or unresolved dependencies detected."}
                     )
-                    result = func(**args)
-                    result_serializable = make_serializable(result)
-                    update_tool_call(
-                        db=db,
-                        tool_call_id=tool_call.id,
-                        status="success",
-                        output_data=result_serializable
-                    )
-                    outputs[task["id"]] = result_serializable
-                    remaining.remove(task)
-                    progress = True
+                    raise RuntimeError("Circular dependency or unresolved dependencies detected.")
 
-                    print(f"✅ Executed: {task['task']} | ID: {task['id']}")
+            print(f"🏁 All tasks completed. Total plan versions: {len(plan_versions)}")
+            print("output....")
+            print(outputs)
+            update_step(
+                db=db,
+                step_id=step.id,
+                status="Completed",
+                output_data={"outputs": make_serializable(outputs), "plan_versions": make_serializable(plan_versions)}
+            )
+            return {"outputs": outputs, "plan_versions": plan_versions}
 
-                    # --------------------------------
-                    #  Handle analyze_answer flag
-                    # --------------------------------
-                    if task.get("analyze_answer", False):
-                        target_prop = task.get("analyze_target_property")
-                        if target_prop:
-                            try:
-                                target_value = extract_property(result_serializable, target_prop)
-                            except Exception as e:
-                                print(f"⚠️ Could not extract property '{target_prop}': {e}")
-                                target_value = result_serializable
-                        else:
-                            target_value = result_serializable
+        except Exception as e:
+            print(f"❌ Fatal error in run_plan: {e}")
+            update_step(
+                db=db,
+                step_id=step.id,
+                status="Error",
+                output_data={"error": str(e)}
+            )
+            # Re-raise so Workflow._safe_node_call() stops the workflow
+            raise RuntimeError(f"Plan execution failed: {e}") from e
 
-                        print(f"🧠 Triggering LLM analysis for '{task['id']}'...")
-
-                        # Call analyzer LLM to update the plan dynamically
-                        new_plan = self._analyze_and_update_plan(
-                            question=state["question"],
-                            plan=remaining,
-                            latest_output=target_value,
-                            previous_outputs=outputs
-                        )
-
-                        validated = TaskPlanning.validate_plan(db, state)
-                        if not validated.get("validation", False):
-                            print("⚠️ New plan failed validation, skipping update.")
-                            continue
-
-                        plan_versions.append(copy.deepcopy(new_plan))
-                        print(f"🔄 Plan updated → version {len(plan_versions)}")
-                        remaining = copy.deepcopy(new_plan)
-                        break  # restart loop with updated plan
-
-            if not progress:
-                update_step(
-                    db=db,
-                    step_id=step.id,
-                    status="Error",
-                    output_data=f"Circular dependency or unresolved dependencies detected."
-                )
-                raise RuntimeError("Circular dependency or unresolved dependencies detected.")
-
-        print(f"🏁 All tasks completed. Total plan versions: {len(plan_versions)}")
-        update_step(
-            db=db,
-            step_id=step.id,
-            status="Completed",
-            output_data={"outputs": outputs, "plan_versions": plan_versions}
-        )
-        return {"outputs": outputs, "plan_versions": plan_versions}
 
 
 

@@ -1,3 +1,6 @@
+import datetime
+import numpy as np
+import pandas as pd
 from pydantic import Field
 from utils.tools import Tools
 from sqlalchemy.orm import Session
@@ -30,6 +33,28 @@ class TaskResponseFormatter(TypedDict):
 class Plan(TypedDict):
     plan: List[TaskResponseFormatter] = Field(description="List of tasks to be execute")
 
+def make_serializable(value):
+    """Recursively convert pandas/numpy/datetime objects to JSON-safe formats."""
+    if isinstance(value, pd.DataFrame):
+        return value.to_dict(orient="records")
+    elif isinstance(value, (list, tuple, set)):
+        return [make_serializable(v) for v in value]
+    elif isinstance(value, dict):
+        return {k: make_serializable(v) for k, v in value.items()}
+    elif isinstance(value, (pd.Timestamp, datetime.datetime, datetime.date)):
+        return value.isoformat()
+    elif isinstance(value, (np.integer,)):
+        return int(value)
+    elif isinstance(value, (np.floating,)):
+        return float(value)
+    elif isinstance(value, (np.ndarray,)):
+        return value.tolist()
+    elif value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    else:
+        # Fallback: convert unknown objects to string
+        return str(value)
+
 class TaskPlanning:
     def __init__(self, plan_structure_llm):
         self.plan_structure_llm = plan_structure_llm
@@ -61,27 +86,34 @@ class TaskPlanning:
             name="Planning",
             input_data=state["question"]
         )
+
         try:
             prompt = self.planning_prompt.invoke({"question": state["question"]})
             result = self.plan_structure_llm.invoke(prompt)
+
             update_step(
                 db=db,
                 step_id=step.id,
                 status="Completed",
-                output_data=result
+                output_data={"output": make_serializable(result)}
             )
+
             print("🧩 Plan generated successfully.")
-            if result == "{}":
-                return []
+            print(result == {})
+            if result == {}:
+                return {"plan": []}
             return {"plan": result["plan"]}
+
         except Exception as e:
             print(f"⚠️ Error generating task plan: {e}")
             update_step(
                 db=db,
                 step_id=step.id,
                 status="Error",
+                output_data={"error": str(e)}
             )
-            return {"plan": []}
+            raise RuntimeError(f"Task planning failed: {e}") from e
+
 
     @staticmethod
     def validate_plan(db: Session, state: State):
@@ -97,63 +129,83 @@ class TaskPlanning:
             db=db,
             run_id=state["run_id"],
             name="Plan Validation",
-            input_data=state["plan"]
+            input_data=state.get("plan", {})
         )
-        tools = Tools()
-        task_ids = set()
-        errors = []
-        plan = state["plan"]
 
-        for task in plan:
-            task_id = task.get("id")
-            task_name = task.get("task")
-            deps = task.get("dep", [])
-            args = task.get("args", [])
+        try:
+            tools = Tools()
+            task_ids = set()
+            errors = []
+            plan = state.get("plan", [])
 
-            # ---- ID check
-            if not isinstance(task_id, str):
-                errors.append(f"Task ID must be a string: {task_id}")
-            elif task_id in task_ids:
-                errors.append(f"Duplicate task ID found: {task_id}")
-            else:
-                task_ids.add(task_id)
+            if not isinstance(plan, list):
+                raise ValueError("Plan must be a list of tasks")
 
-            # ---- Tool validity check
-            if task_name not in tools.TASK_FUNCS:
-                errors.append(f"Invalid task/tool name: {task_name}")
+            for task in plan:
+                task_id = task.get("id")
+                task_name = task.get("task")
+                deps = task.get("dep", [])
+                args = task.get("args", [])
 
-            # ---- Dependency check
-            if not isinstance(deps, list):
-                errors.append(f"Dependencies must be a list for task {task_id}")
-            else:
-                for dep in deps:
-                    if dep not in task_ids and dep not in [t.get("id") for t in plan]:
-                        errors.append(f"Task {task_id} depends on missing task '{dep}'")
+                # ---- ID check
+                if not isinstance(task_id, str):
+                    errors.append(f"Task ID must be a string: {task_id}")
+                elif task_id in task_ids:
+                    errors.append(f"Duplicate task ID found: {task_id}")
+                else:
+                    task_ids.add(task_id)
 
-            # ---- Args format
-            if not isinstance(args, list):
-                errors.append(f"Args must be a list for task {task_id}")
+                # ---- Tool validity check
+                if task_name not in tools.TASK_FUNCS:
+                    errors.append(f"Invalid task/tool name: {task_name}")
 
-        if errors:
-            print("❌ Plan validation failed:")
-            for e in errors:
-                print(f"   - {e}")
+                # ---- Dependency check
+                if not isinstance(deps, list):
+                    errors.append(f"Dependencies must be a list for task {task_id}")
+                else:
+                    for dep in deps:
+                        if dep not in task_ids and dep not in [t.get("id") for t in plan]:
+                            errors.append(f"Task {task_id} depends on missing task '{dep}'")
+
+                # ---- Args format
+                if not isinstance(args, list):
+                    errors.append(f"Args must be a list for task {task_id}")
+
+            if errors:
+                print("❌ Plan validation failed:")
+                for e in errors:
+                    print(f"   - {e}")
+                update_step(
+                    db=db,
+                    step_id=step.id,
+                    status="Completed",
+                    output_data={"validation": False, "errors": errors}
+                )
+
+                # Expected validation failure (not an exception)
+                return {"validation": False, "errors": errors}
+
+            # ✅ Validation success
+            print("✅ Plan validation passed.")
             update_step(
                 db=db,
                 step_id=step.id,
                 status="Completed",
-                output_data={"validation": False, "errors": errors}
+                output_data={"validation": True, "errors": []}
             )
-            return {"validation": False, "errors": errors}
+            return {"validation": True, "errors": []}
 
-        print("✅ Plan validation passed.")
-        update_step(
-            db=db,
-            step_id=step.id,
-            status="Completed",
-            output_data={"validation": True, "errors": []}
-        )
-        return {"validation": True, "errors": []}
+        except Exception as e:
+            # 🧱 Unexpected runtime failure
+            print(f"⚠️ Error validating plan: {e}")
+            update_step(
+                db=db,
+                step_id=step.id,
+                status="Error",
+                output_data={"error": str(e)}
+            )
+            raise RuntimeError(f"Plan validation failed unexpectedly: {e}") from e
+
 
 
 # ==========================================================

@@ -9,6 +9,9 @@ from langchain.chat_models import init_chat_model
 from utils.utils import Settings
 from .agent_core.workflow import Workflow
 from .agent_core.planner import Plan  
+from db.insert_dataset import DatasetEntry
+from crud.message import create_human_message, create_assistant_message
+
 
 from crud.run import create_run, end_run
 
@@ -72,6 +75,7 @@ class Agent:
 
         run = create_run(db, message_obj.id)
         self.workflow.set_db(db)
+        self.workflow.failed = False
         state = {
             "question": message_content, 
             "thread_id": thread_id,
@@ -89,3 +93,37 @@ class Agent:
         end_run(db, run.id)
         print("\n✅ Agent pipeline finished successfully!\n")
         return execution_result 
+    
+
+    def process_dataset_entries(self, db: Session):
+        """
+        Fetch all dataset_entries from the database and process them sequentially
+        through the given Workflow instance.
+        """
+        thread_id = "e9b0fc0f-8b14-47f6-b6fa-859ad8d73b6c"
+        # Fetch all entries
+        entries = db.query(DatasetEntry).all()
+        print(f"📦 Found {len(entries)} dataset entries to process.")
+
+        for i, entry in enumerate(entries, start=1):
+            print(f"\n🚀 Processing entry {i}/{len(entries)} | ID: {entry.id}")
+            print(entry.user_query)
+
+            human_msg = create_human_message(db, thread_id=thread_id, content=entry.user_query)
+            print(human_msg.content)
+            execution = self.ask(db, human_msg)
+
+            resp_obj = execution.get("direct_response") or execution.get("generate_response")
+            response_text = None
+            if resp_obj:
+                response_text = resp_obj["response"] 
+                
+            # Outputs - Grounded base for the answer 
+            run_plan = execution.get("run_plan")
+            plan_outputs = []
+            if run_plan:
+                for output in run_plan["outputs"]:
+                    plan_outputs.append(run_plan["outputs"][output]) 
+            
+            create_assistant_message(db, thread_id=thread_id, content=response_text, resp_msg_id=human_msg.id)
+            print(response_text)
