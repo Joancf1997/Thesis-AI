@@ -118,3 +118,27 @@ def update_thread_name(
     db.refresh(thread)
 
     return thread
+
+
+def remove_thread(
+    db: Session,
+    thread_id: uuid.UUID,
+    user_id: uuid.UUID
+):
+    thread = (
+        db.query(Thread)
+        .filter(Thread.id == thread_id, Thread.user_id == user_id)
+        .first()
+    )
+
+    if not thread:
+        raise HTTPException(
+            status_code=404,
+            detail="Thread not found or not owned by this user"
+        )
+
+    # Delete thread (cascade handles messages/runs/steps/tool_calls)
+    db.delete(thread)
+    db.commit()
+
+    return thread

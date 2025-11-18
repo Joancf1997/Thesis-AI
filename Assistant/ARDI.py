@@ -100,7 +100,7 @@ class Agent:
         Fetch all dataset_entries from the database and process them sequentially
         through the given Workflow instance.
         """
-        thread_id = "e9b0fc0f-8b14-47f6-b6fa-859ad8d73b6c"
+        thread_id = "63e30d56-e1b5-46c2-a440-661520ee024f"
         # Fetch all entries
         entries = db.query(DatasetEntry).all()
         print(f"📦 Found {len(entries)} dataset entries to process.")

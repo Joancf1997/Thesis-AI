@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from API.SystemAPI import load_user_segments, load_user_segments_detail
 from Assistant.ARDIChat import ChatAssistant
-from crud.thread import create_new_thread, load_threads, load_thread_messages, update_thread_name
+from crud.thread import create_new_thread, load_threads, load_thread_messages, update_thread_name, remove_thread
+from crud.users import load_users, create_user
+from crud.login import login_user
 from db.session import get_db
 from fastapi.middleware.cors import CORSMiddleware 
 
@@ -61,6 +63,41 @@ def dataset_evaluation(db: Session = Depends(get_db)):
     response = chat.evaluate_dataset(db)
     return {"evaluarion": response}
 
+# ===============================
+# users 
+# ===============================
+@app.get("/users")
+def list_users(db: Session = Depends(get_db)):
+    users = load_users(db)
+    return {"users": users}
+
+
+class CreateUserRequest(BaseModel):
+    username: str
+    password: str
+@app.post("/users/create")
+def create_user_endpoint(
+    req: CreateUserRequest,
+    db: Session = Depends(get_db)
+):
+    user = create_user(db, req)
+    return {"user": user}
+
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+@app.post("/auth/login")
+def login_endpoint(
+    req: LoginRequest, 
+    db: Session = Depends(get_db)
+):
+    result = login_user(db, req)
+    return {"login": result}
+
+
+
 
 
 # ===============================
@@ -82,7 +119,7 @@ def get_user_segment_detail(id: str):
 
 from pydantic import BaseModel
 from uuid import UUID
-from typing import Optional, List, Any
+from typing import Optional, Any
 
 
 class AskRequest(BaseModel):
@@ -141,6 +178,25 @@ def rename_thread(
             "started_at": thread.started_at,
             "ended_at": thread.ended_at
         }
+    }
+
+class DeleteThreadRequest(BaseModel):
+    user_id: UUID
+@app.delete("/chat/thread/{thread_id}")
+def delete_thread(
+    thread_id: UUID,
+    req: DeleteThreadRequest,
+    db: Session = Depends(get_db)
+):
+    deleted = remove_thread(
+        db=db,
+        thread_id=thread_id,
+        user_id=req.user_id
+    )
+
+    return {
+        "deleted": True,
+        "thread_id": str(deleted.id)
     }
 
 if __name__ == "__main__":

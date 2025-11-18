@@ -12,12 +12,11 @@ class ToolCall(Base):
     __tablename__ = "tool_calls"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    step_id = Column(UUID(as_uuid=True), ForeignKey("steps.id"))
-    tool_name = Column(String)           # function name: segment_summary, region_description..
+    step_id = Column(UUID(as_uuid=True), ForeignKey("steps.id", ondelete="CASCADE"))
+    tool_name = Column(String)
     input = Column(JSON)
     output = Column(JSON)
-    status = Column(String)              # "success" | "error"
+    status = Column(String)
     error_message = Column(Text)
     started_at = Column(DateTime, default=datetime.utcnow)
     ended_at = Column(DateTime, nullable=True)

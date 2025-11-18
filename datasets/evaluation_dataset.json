@@ -1,70 +1,60 @@
 [
   {
     "user_query": "Describe the reading behavior of the segment 'Schulwesen und Unwetter-Themen dominieren Interesse'.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_description\", \"id\": \"segment_desc_0\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"0\"}]}]}",
     "tools_used": ["get_segment_description"],
     "focus": "segment description",
     "complexity": 1
   },
   {
     "user_query": "What are the engagement statistics for user segment 7?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_engagement_stats\", \"id\": \"eng_stats_7\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"7\"}]}]}",
     "tools_used": ["get_segment_engagement_stats"],
     "focus": "engagement",
     "complexity": 1
   },
   {
     "user_query": "Describe how users in segment 6 transition between topics.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_topic_transitions\", \"id\": \"topic_tr_seg6\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"6\"}, {\"key\": \"top_n\", \"value\": \"10\"}]}]}",
     "tools_used": ["get_topic_transitions"],
     "focus": "topic transitions",
     "complexity": 1
   },
   {
     "user_query": "Which regions are most active in segment 3?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_regions\", \"id\": \"regions_seg3\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"3\"}, {\"key\": \"top_n\", \"value\": \"5\"}]}]}",
     "tools_used": ["get_segment_regions"],
     "focus": "region",
     "complexity": 1
   },
   {
     "user_query": "When does segment 9 read news the most?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_time_activity\", \"id\": \"time_act_seg9\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"9\"}]}]}",
     "tools_used": ["get_segment_time_activity"],
     "focus": "time of day",
     "complexity": 1
   },
   {
     "user_query": "Show the high-representative articles for user segment 2.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_high_rep_docs\", \"id\": \"high_rep_docs_seg2\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"2\"}]}]}",
     "tools_used": ["get_segment_high_rep_docs"],
     "focus": "representative docs",
     "complexity": 1
   },
   {
     "user_query": "Which day part is the most active for segment 8?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_activity_by_day_part\", \"id\": \"day_part_seg8\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"8\"}]}]}",
     "tools_used": ["get_segment_activity_by_day_part"],
     "focus": "day part",
     "complexity": 1
   },
   {
     "user_query": "Show the most engaged articles for segment 10.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_engage_docs\", \"id\": \"engaged_seg10\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"10\"}]}]}",
     "tools_used": ["get_segment_engage_docs"],
     "focus": "engaged articles",
     "complexity": 1
   },
   {
     "user_query": "Show articles users did not engage with in segment 5.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_not_engage_docs\", \"id\": \"noteng_seg5\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"5\"}]}]}",
     "tools_used": ["get_segment_not_engage_docs"],
     "focus": "non-engaged documents",
     "complexity": 1
   },
   {
     "user_query": "Show most representative articles for the topic #3.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_news_topics_high_docs\", \"id\": \"high_docs_13\", \"dep\": [], \"args\": [{\"key\": \"topic_id\", \"value\": \"13\"}]}]}",
     "tools_used": ["get_news_topics_high_docs"],
     "focus": "topic high docs",
     "complexity": 1
@@ -74,71 +64,61 @@
 
   {
     "user_query": "Show the most recent 5 articles read by segment 1 between 18:00 and 21:00.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_articles_by_time\", \"id\": \"articles_seg1\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"1\"}, {\"key\": \"start_hour\", \"value\": \"18\"}, {\"key\": \"end_hour\", \"value\": \"21\"}]}, {\"task\": \"get_top_recent_articles\", \"id\": \"recent_seg1\", \"dep\": [\"articles_seg1\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_articles_seg1\", \"property\": \"articles\"}, {\"key\": \"top\", \"value\": \"5\"}]}]}",
     "tools_used": ["get_segment_articles_by_time", "get_top_recent_articles"],
     "focus": "articles timeline",
     "complexity": 2
   },
   {
     "user_query": "What topic clusters do the most-engaged documents in segment 4 belong to?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_engage_docs\", \"id\": \"eng_docs_seg4\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"4\"}]}, {\"task\": \"get_unique_clusters\", \"id\": \"clusters_seg4\", \"dep\": [\"eng_docs_seg4\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_eng_docs_seg4\", \"property\": \"docs_engage\"}]}]}",
     "tools_used": ["get_segment_engage_docs", "get_unique_clusters"],
     "focus": "topic cluster discovery",
     "complexity": 2
   },
   {
     "user_query": "Which news topics are represented by high-representative docs (first two) of segment 9?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_high_rep_docs\", \"id\": \"high_rep_seg9\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"9\"}]}, {\"task\": \"get_unique_clusters\", \"id\": \"clusters_seg9\", \"dep\": [\"high_rep_seg9\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_high_rep_seg9\", \"property\": \"high_representative_docs\"}]}]}",
     "tools_used": ["get_segment_high_rep_docs", "get_unique_clusters"],
     "focus": "topics from representative docs",
     "complexity": 2
   },
   {
     "user_query": "What are the main topics read during peak hours of segment 5?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_time_activity\", \"id\": \"time_seg11\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"11\"}]}, {\"task\": \"get_segment_articles_by_time\", \"id\": \"articles_seg11\", \"dep\": [\"time_seg11\"], \"args\": [{\"key\": \"segment_id\", \"value\": \"11\"}, {\"key\": \"start_hour\", \"value\": \"DEP_time_seg11\", \"property\": \"peak_activity\"}, {\"key\": \"end_hour\", \"value\": \"DEP_time_seg11\", \"property\": \"peak_activity\"}]}, {\"task\": \"get_unique_clusters\", \"id\": \"clusters_seg11\", \"dep\": [\"articles_seg11\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_articles_seg11\", \"property\": \"articles\"}]}]}",
     "tools_used": ["get_segment_time_activity", "get_segment_articles_by_time", "get_unique_clusters"],
     "focus": "peak activity → articles → topics",
     "complexity": 2
   },
   {
     "user_query": "Retrieve metadata of the most-engaged articles in segment 5.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_engage_docs\", \"id\": \"eng_seg5\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"5\"}]}, {\"task\": \"get_articles_info\", \"id\": \"info_seg5\", \"dep\": [\"eng_seg5\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_eng_seg5\", \"property\": \"docs_engage\"}]}]}",
     "tools_used": ["get_segment_engage_docs", "get_articles_info"],
     "focus": "article metadata",
     "complexity": 2
   },
   {
     "user_query": "Get the top 3 predicted topics after 'Sport' for segment 4.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_next_topic_prediction\", \"id\": \"predict_seg4_sport\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"4\"}, {\"key\": \"current_topic\", \"value\": \"Sport\"}, {\"key\": \"top_n\", \"value\": \"3\"}]}]}",
     "tools_used": ["get_next_topic_prediction"],
     "focus": "topic prediction",
     "complexity": 2
   },
   {
     "user_query": "Which low-relevance documents exist for topic 5, and what are their metadata?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_news_topics_low_docs\", \"id\": \"lowdocs_t18\", \"dep\": [], \"args\": [{\"key\": \"topic_id\", \"value\": \"18\"}]}, {\"task\": \"get_articles_info\", \"id\": \"articles_t18\", \"dep\": [\"lowdocs_t18\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_lowdocs_t18\"}]}]}",
     "tools_used": ["get_news_topics_low_docs", "get_articles_info"],
     "focus": "low doc metadata",
     "complexity": 2
   },
   {
     "user_query": "Retrieve topic descriptions of the clusters found from recent articles in segment 2.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_engage_docs\", \"id\": \"eng_seg2\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"2\"}]}, {\"task\": \"get_unique_clusters\", \"id\": \"clust_seg2\", \"dep\": [\"eng_seg2\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_eng_seg2\", \"property\": \"docs_engage\"}]}, {\"task\": \"get_news_topics_info\", \"id\": \"topics_info2\", \"dep\": [\"clust_seg2\"], \"args\": [{\"key\": \"topics_id\", \"value\": \"DEP_clust_seg2\"}]}]}",
     "tools_used": ["get_segment_engage_docs", "get_unique_clusters", "get_news_topics_info"],
     "focus": "clusters → topic info",
     "complexity": 2
   },
   {
     "user_query": "What are the teaser texts of high representative docs for segment 6?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_high_rep_docs\", \"id\": \"rep_seg6\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"6\"}]}, {\"task\": \"get_articles_info\", \"id\": \"articles_seg6\", \"dep\": [\"rep_seg6\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_rep_seg6\", \"property\": \"high_representative_docs\"}]}]}",
     "tools_used": ["get_segment_high_rep_docs", "get_articles_info"],
     "focus": "article metadata",
     "complexity": 2
   },
   {
     "user_query": "Compare the content of articles read during the morning for segment 3.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_articles_by_time\", \"id\": \"morn_seg3\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"3\"}, {\"key\": \"start_hour\", \"value\": \"6\"}, {\"key\": \"end_hour\", \"value\": \"12\"}]}]}",
-    "tools_used": ["get_segment_articles_by_time"],
+    "tools_used": ["get_segment_articles_by_time", "get_articles_info"],
     "focus": "morning activity",
     "complexity": 2
   },
@@ -147,72 +127,62 @@
 
   {
     "user_query": "For the segment 'Deutschland-Themen und Politik im Fokus', what topics are consumed during peak hours?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_time_activity\", \"id\": \"time_seg4\", \"analyze_answer\": true, \"analyze_target_property\": \"peak_activity\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"4\"}]}, {\"task\": \"get_segment_articles_by_time\", \"id\": \"articles_seg4\", \"analyze_answer\": false, \"dep\": [\"time_seg4\"], \"args\": [{\"key\": \"segment_id\", \"value\": \"4\"}, {\"key\": \"start_hour\", \"value\": \"DEP_time_seg4\", \"property\": \"peak_activity\"}, {\"key\": \"end_hour\", \"value\": \"DEP_time_seg4\", \"property\": \"peak_activity\"}]}, {\"task\": \"get_unique_clusters\", \"id\": \"clusters_seg4\", \"dep\": [\"articles_seg4\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_articles_seg4\", \"property\": \"articles\"}]}, {\"task\": \"get_news_topics_info\", \"id\": \"topics_info4\", \"dep\": [\"clusters_seg4\"], \"args\": [{\"key\": \"topics_id\", \"value\": \"DEP_clusters_seg4\"}]}]}",
     "tools_used": ["get_segment_time_activity", "get_segment_articles_by_time", "get_unique_clusters", "get_news_topics_info"],
     "focus": "peak activity → topics",
     "complexity": 3
   },
   {
     "user_query": "Find out when segment 10 reads the most, then retrieve metadata of articles in that period.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_time_activity\", \"id\": \"time_seg10\", \"analyze_answer\": true, \"analyze_target_property\": \"peak_activity\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"10\"}]}, {\"task\": \"get_segment_articles_by_time\", \"id\": \"articles_seg10\", \"dep\": [\"time_seg10\"], \"args\": [{\"key\": \"segment_id\", \"value\": \"10\"}, {\"key\": \"start_hour\", \"value\": \"DEP_time_seg10\", \"property\": \"peak_activity\"}, {\"key\": \"end_hour\", \"value\": \"DEP_time_seg10\", \"property\": \"peak_activity\"}]}, {\"task\": \"get_articles_info\", \"id\": \"articlesinfo_seg10\", \"dep\": [\"articles_seg10\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_articles_seg10\", \"property\": \"articles\"}]}]}",
     "tools_used": ["get_segment_time_activity", "get_segment_articles_by_time", "get_articles_info"],
     "focus": "peak → article metadata",
     "complexity": 3
   },
   {
     "user_query": "Analyze which topics generate low engagement in segment 6 and get metadata for those articles.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_not_engage_docs\", \"id\": \"noteng_seg6\", \"analyze_answer\": true, \"analyze_target_property\": \"docs_notengage\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"6\"}]}, {\"task\": \"get_unique_clusters\", \"id\": \"clust_seg6\", \"dep\": [\"noteng_seg6\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_noteng_seg6\", \"property\": \"docs_notengage\"}]}, {\"task\": \"get_news_topics_info\", \"id\": \"info_seg6\", \"dep\": [\"clust_seg6\"], \"args\": [{\"key\": \"topics_id\", \"value\": \"DEP_clust_seg6\"}]}]}",
     "tools_used": ["get_segment_not_engage_docs", "get_unique_clusters", "get_news_topics_info"],
     "focus": "non-engagement → topic info",
     "complexity": 3
   },
   {
     "user_query": "Identify whether morning, afternoon, evening, or night generates more document engagement for segment 2 and show the docs.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_activity_by_day_part\", \"id\": \"day_seg2\", \"analyze_answer\": true, \"analyze_target_property\": \"peak_day_part\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"2\"}]}, {\"task\": \"get_segment_engage_docs\", \"id\": \"eng_seg2\", \"dep\": [\"day_seg2\"], \"args\": [{\"key\": \"segment_id\", \"value\": \"2\"}]}, {\"task\": \"get_articles_info\", \"id\": \"eng_docs_info\", \"dep\": [\"eng_seg2\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_eng_seg2\", \"property\": \"docs_engage\"}]}]}",
     "tools_used": ["get_segment_activity_by_day_part", "get_segment_engage_docs", "get_articles_info"],
     "focus": "day part → docs",
     "complexity": 3
   },
   {
     "user_query": "For topic 2, retrieve low docs and then find and describe the clusters of those articles.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_news_topics_low_docs\", \"id\": \"low_t20\", \"dep\": [], \"args\": [{\"key\": \"topic_id\", \"value\": \"20\"}]}, {\"task\": \"get_unique_clusters\", \"id\": \"clust_t20\", \"dep\": [\"low_t20\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_low_t20\", \"property\": \"low_docs\"}]}]}",
     "tools_used": ["get_news_topics_low_docs", "get_unique_clusters"],
     "focus": "topic → low docs → clusters",
     "complexity": 3
   },
   {
     "user_query": "What topics are users consuming next after the highest engagement topic during peak hours for segment 3?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_time_activity\", \"id\": \"time_seg3\", \"analyze_answer\": true, \"analyze_target_property\": \"peak_activity\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"3\"}]}, {\"task\": \"get_next_topic_prediction\", \"id\": \"predict_seg3\", \"dep\": [\"time_seg3\"], \"args\": [{\"key\": \"segment_id\", \"value\": \"3\"}, {\"key\": \"current_topic\", \"value\": \"Politics\"}, {\"key\": \"top_n\", \"value\": \"3\"}]}]}",
-    "tools_used": ["get_segment_time_activity", "get_next_topic_prediction"],
+    "tools_used": ["get_segment_time_activity", "get_segment_articles_by_time", "get_unique_clusters", "get_next_topic_prediction"],
     "focus": "peak hour → next topics prediction",
     "complexity": 3
   },
   {
     "user_query": "Which topics represent the most recent 3 articles read during the afternoon by segment 7?",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_articles_by_time\", \"id\": \"aft_seg7\", \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"7\"}, {\"key\": \"start_hour\", \"value\": \"12\"}, {\"key\": \"end_hour\", \"value\": \"18\"}]}, {\"task\": \"get_top_recent_articles\", \"id\": \"recent_seg7\", \"dep\": [\"aft_seg7\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_aft_seg7\", \"property\": \"articles\"}, {\"key\": \"top\", \"value\": \"3\"}]}, {\"task\": \"get_unique_clusters\", \"id\": \"clust_seg7\", \"dep\": [\"recent_seg7\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_recent_seg7\"}]}]}",
     "tools_used": ["get_segment_articles_by_time", "get_top_recent_articles", "get_unique_clusters"],
     "focus": "articles → clusters",
     "complexity": 3
   },
   {
     "user_query": "From the most engaged docs in segment 9, tell me which topics they represent.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_engage_docs\", \"id\": \"eng_seg12\", \"analyze_answer\": true, \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"12\"}]}, {\"task\": \"get_unique_clusters\", \"id\": \"clusters_seg12\", \"dep\": [\"eng_seg12\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_eng_seg12\", \"property\": \"docs_engage\"}]}, {\"task\": \"get_news_topics_info\", \"id\": \"topics_seg12\", \"dep\": [\"clusters_seg12\"], \"args\": [{\"key\": \"topics_id\", \"value\": \"DEP_clusters_seg12\"}]}]}",
     "tools_used": ["get_segment_engage_docs", "get_unique_clusters", "get_news_topics_info"],
     "focus": "engagement → clusters → topics",
     "complexity": 3
   },
   {
     "user_query": "Compare user consumption behaviour from user segment 3 and user segment 5.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_segment_time_activity\", \"id\": \"time_seg14\", \"analyze_answer\": true, \"dep\": [], \"args\": [{\"key\": \"segment_id\", \"value\": \"14\"}]}, {\"task\": \"get_segment_high_rep_docs\", \"id\": \"reps_seg14\", \"dep\": [\"time_seg14\"], \"args\": [{\"key\": \"segment_id\", \"value\": \"14\"}]}, {\"task\": \"get_unique_clusters\", \"id\": \"clust14\", \"dep\": [\"reps_seg14\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_reps_seg14\", \"property\": \"high_representative_docs\"}]}]}",
-    "tools_used": ["get_segment_engagement_stats", "get_segment_engagement_stats", "get_segment_time_activity", "get_segment_time_activity" ],
+    "tools_used": ["get_segment_engagement_stats", "get_segment_time_activity"],
     "focus": "behavior + topics",
     "complexity": 3
   },
   {
     "user_query": "what user segments have their peak activity in the morning.",
-    "task_plan": "{\"plan\": [{\"task\": \"get_news_topics_high_docs\", \"id\": \"high_t5\", \"dep\": [], \"args\": [{\"key\": \"topic_id\", \"value\": \"5\"}]}, {\"task\": \"get_unique_clusters\", \"id\": \"clust_t5\", \"dep\": [\"high_t5\"], \"args\": [{\"key\": \"articles_ids\", \"value\": \"DEP_high_t5\"}]}]}",
     "tools_used": ["get_segment_activity_by_day_part"],
-    "focus": "topic → docs → clusters",
+    "focus": "behavior",
     "complexity": 3
   }
 ]

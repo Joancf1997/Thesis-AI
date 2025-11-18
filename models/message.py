@@ -12,15 +12,18 @@ class Message(Base):
     __tablename__ = "messages"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    thread_id = Column(UUID(as_uuid=True), ForeignKey("threads.id"))
-    role = Column(String)  # "user" or "assistant"
+    thread_id = Column(UUID(as_uuid=True), ForeignKey("threads.id", ondelete="CASCADE"))
+    role = Column(String)
     content = Column(Text)
     response_to = Column(UUID(as_uuid=True))
-
     created_at = Column(DateTime, default=datetime.utcnow)
 
     thread = relationship("Thread", back_populates="messages")
 
-    # A message may trigger a Run (agent workflow)
-    run = relationship("Run", back_populates="message", uselist=False)
+    run = relationship(
+        "Run",
+        back_populates="message",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )

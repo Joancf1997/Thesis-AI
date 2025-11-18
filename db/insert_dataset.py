@@ -11,8 +11,7 @@ class DatasetEntry(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_query = Column(String, nullable=False)
-    task_plan = Column(String, nullable=False)   # stored as JSON string
-    tools_used = Column(JSON, nullable=False)    # list of strings
+    tools_used = Column(JSON, nullable=False)  
     focus = Column(String, nullable=False)
     complexity = Column(Integer, nullable=False)
 
@@ -29,7 +28,6 @@ def insert_dataset_from_json(json_path: str, db_url: str = "postgresql://joseand
     [
       {
         "user_query": "string",
-        "task_plan": "string (JSON)",
         "tools_used": ["list", "of", "tools"],
         "focus": "string",
         "complexity": int
@@ -56,7 +54,6 @@ def insert_dataset_from_json(json_path: str, db_url: str = "postgresql://joseand
         for item in dataset:
             entry = DatasetEntry(
                 user_query=item["user_query"],
-                task_plan=item["task_plan"],
                 tools_used=item["tools_used"],
                 focus=item["focus"],
                 complexity=item["complexity"]

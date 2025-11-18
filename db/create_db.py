@@ -7,6 +7,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 from db.base import Base, engine
+from models.user import User
 from models.thread import Thread
 from models.run import Run
 from models.step import Step
