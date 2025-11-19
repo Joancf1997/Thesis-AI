@@ -6,7 +6,18 @@ from models.step import Step
 from models.run import Run
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from models.datasetEvaluation import DatasetEvaluation
 
+
+def get_dataset_evaluations(db: Session):
+    evaluations = (
+        db.query(DatasetEvaluation)
+        .order_by(DatasetEvaluation.created_at.asc())
+        .all()
+    )
+    if not evaluations:
+        raise HTTPException(status_code=404, detail="No evaluations found for this thread")
+    return evaluations
 
 def create_new_thread(
     db: Session,

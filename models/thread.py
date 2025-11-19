@@ -27,3 +27,11 @@ class Thread(Base):
         cascade="all, delete-orphan",
         passive_deletes=True
     )
+
+    evaluations = relationship(
+        "DatasetEvaluation",
+        back_populates="thread",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
+

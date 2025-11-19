@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from API.SystemAPI import load_user_segments, load_user_segments_detail
 from Assistant.ARDIChat import ChatAssistant
-from crud.thread import create_new_thread, load_threads, load_thread_messages, update_thread_name, remove_thread
+from crud.thread import create_new_thread, load_threads, load_thread_messages, update_thread_name, remove_thread, get_dataset_evaluations
 from crud.users import load_users, create_user
 from crud.login import login_user
 from db.session import get_db
@@ -58,10 +58,28 @@ def chat_endpoint(question: Question, db: Session = Depends(get_db)):
     return {"response": response}
 
 
-@app.get("/dataset_evaluation")
-def dataset_evaluation(db: Session = Depends(get_db)):
-    response = chat.evaluate_dataset(db)
+class CreateThreadEvaluationRequest(BaseModel):
+    user_id: uuid.UUID
+    name: str = "Dataset Evaluation"
+@app.post("/dataset_evaluation")
+def dataset_evaluation(
+    req: CreateThreadEvaluationRequest, 
+    db: Session = Depends(get_db)
+):
+    print(req)
+    response = chat.evaluate_dataset(
+        db, 
+        user_id=req.user_id,
+        name=req.name
+    )
     return {"evaluarion": response}
+
+
+@app.get("/dataset_evaluations")
+def dataset_evaluations(db: Session = Depends(get_db)):
+    evaluations = get_dataset_evaluations(db)
+    return evaluations
+
 
 # ===============================
 # users 

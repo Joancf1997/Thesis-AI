@@ -58,6 +58,6 @@ class ChatAssistant():
         }
         return response
     
-    def evaluate_dataset(self, db: Session):
-        self.agent.process_dataset_entries(db)
+    def evaluate_dataset(self, db: Session, user_id=uuid.UUID, name=str):
+        self.agent.process_dataset_entries(db, user_id, name)
         return "Finish dataset evaluation"

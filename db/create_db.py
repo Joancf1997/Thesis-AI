@@ -13,6 +13,7 @@ from models.run import Run
 from models.step import Step
 from models.message import Message
 from models.toolCall import ToolCall
+from models.datasetEvaluation import DatasetEvaluation
 
 print("Creating database tables...")
 Base.metadata.create_all(bind=engine)
