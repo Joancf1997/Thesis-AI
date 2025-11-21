@@ -42,6 +42,7 @@ class Agent:
         # Session & config
         self.settings = settings
         self.llm_config = settings.llm
+        print(self.llm_config )
 
         # Initialize everything
         self._init_llms()

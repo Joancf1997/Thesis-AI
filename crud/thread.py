@@ -10,14 +10,33 @@ from models.datasetEvaluation import DatasetEvaluation
 
 
 def get_dataset_evaluations(db: Session):
-    evaluations = (
-        db.query(DatasetEvaluation)
+
+    results = (
+        db.query(DatasetEvaluation, Thread.name.label("thread_name"))
+        .join(Thread, DatasetEvaluation.thread_id == Thread.id)
         .order_by(DatasetEvaluation.created_at.asc())
         .all()
     )
-    if not evaluations:
-        raise HTTPException(status_code=404, detail="No evaluations found for this thread")
-    return evaluations
+
+    if not results:
+        raise HTTPException(status_code=404, detail="No evaluations found")
+
+    return [
+        {
+            "id": str(ev.id),
+            "thread_id": str(ev.thread_id),
+            "thread_name": thread_name,
+            "question": ev.question,
+            "labels": ev.labels,
+            "actual_tools": ev.actual_tools,
+            "matched": ev.matched,
+            "total_labels": ev.total_labels,
+            "match_ratio": ev.match_ratio,
+            "match_ratio_str": ev.match_ratio_str,
+            "created_at": ev.created_at
+        }
+        for ev, thread_name in results
+    ]
 
 def create_new_thread(
     db: Session,
