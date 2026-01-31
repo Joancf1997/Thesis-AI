@@ -8,7 +8,6 @@ def load_config(path: str):
     
 def load_prompt(name: str) -> str:
     base_dir = os.path.dirname(os.getcwd())
-    print(base_dir)
     config_path = os.path.abspath(os.path.join(base_dir, "Thesis-AI/config/prompts", f"{name}.txt"))
     with open(config_path, "r") as file:
         return file.read()

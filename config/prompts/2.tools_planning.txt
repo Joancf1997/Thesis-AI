@@ -61,95 +61,240 @@ Your output must be a JSON array of tasks, where each task represents one tool c
 -----------------------------------
 
 [
-  {{{{
+  {{
     "name": "get_segment_description",
-    "objective": "Retrieve basic information about a user segment including title, description, user types, and regional consumption.",
+    "objective": "Retrieve basic descriptive information about a user segment including title, description, user types distribution, and regional consumption breakdown.",
     "arguments": [
-      {{{{ "name": "segment_id", "type": "integer" }}}}
+      {{ "name": "segment_id", "type": "integer" }}
     ],
-    "output": {{{{
-        "segment_id": "integer",
-        "title": "string",
-        "description": "string",
-        "user_frequent": "integer",
-        "user_nonfrequent": "integer",
-        "region_consumption": "dictionary"
-    }}}}
-  }}}},
-  {{{{
+    "output": {{
+      "segment_id": "integer",
+      "title": "string",
+      "description": "string",
+      "user_frequent": "integer",
+      "user_nonfrequent": "integer",
+      "region_consumption": "dictionary"
+    }}
+  }},
+
+  {{
     "name": "get_segment_engagement_stats",
-    "objective": "Calculate engagement metrics for a specific user segment such as scroll depth, engaged time, and engagement rate.",
+    "objective": "Calculate engagement performance for a user segment including scroll depth, engaged time, and engagement rate.",
     "arguments": [
-      {{{{ "name": "segment_id", "type": "integer" }}}}
+      {{ "name": "segment_id", "type": "integer" }}
     ],
-    "output": {{{{
-        "segment_id": "integer",
-        "avg_scroll_depth": "float",
-        "avg_engaged_secs": "float",
-        "avg_words_per_minute": "float",
-        "median_engaged_secs": "float",
-        "engagement_rate": "float"
-    }}}}
-  }}}},
-  {{{{
-    "name": "get_segment_high_rep_docs",
-    "objective": "Retrieve the most representative documents for a user segment.",
+    "output": {{
+      "segment_id": "integer",
+      "avg_scroll_depth": "float",
+      "avg_engaged_secs": "float",
+      "avg_words_per_minute": "float",
+      "median_engaged_secs": "float",
+      "engagement_rate": "float"
+    }}
+  }},
+
+  {{
+    "name": "get_topic_transitions",
+    "objective": "Retrieve most probable topic transitions from a Markov model, showing how users navigate between topics.",
     "arguments": [
-      {{{{ "name": "segment_id", "type": "integer" }}}}
+      {{ "name": "segment_id", "type": "integer" }},
+      {{ "name": "top_n", "type": "integer" }}
     ],
-    "output": {{{{
-        "segment_id": "integer",
-        "high_representative_docs": "list[string]"
-    }}}}
-  }}}},
-  {{{{
-    "name": "get_unique_clusters",
-    "objective": "Retrieve unique topic cluster identifiers from a list of article IDs.",
+    "output": [
+      {{
+        "from_topic": "string",
+        "to_topic": "string",
+        "probability": "float"
+      }}
+    ]
+  }},
+
+  {{
+    "name": "get_next_topic_prediction",
+    "objective": "Predict the most likely next topics based on the current topic using sequence modeling.",
     "arguments": [
-      {{{{ "name": "articles_ids", "type": "list[string]" }}}}
+      {{ "name": "segment_id", "type": "integer" }},
+      {{ "name": "current_topic", "type": "string" }},
+      {{ "name": "top_n", "type": "integer" }}
     ],
-    "output": {{{{
-        "unique_clusters": "list[integer]"
-    }}}}
-  }}}},
-  {{{{
+    "output": {{
+      "current_topic": "string",
+      "predictions": [
+        {{
+          "next_topic": "string",
+          "probability": "float"
+        }}
+      ]
+    }}
+  }},
+
+  {{
+    "name": "get_segment_regions",
+    "objective": "Return the regions where a segment consumes news the most.",
+    "arguments": [
+      {{ "name": "segment_id", "type": "integer" }},
+      {{ "name": "top_n", "type": "integer" }}
+    ],
+    "output": [
+      {{
+        "region": "string",
+        "readers": "integer"
+      }}
+    ]
+  }},
+
+  {{
     "name": "get_segment_time_activity",
     "objective": "Return reading activity per hour for a user segment, including the peak hour of engagement.",
     "arguments": [
-      {{{{ "name": "segment_id", "type": "integer" }}}}
+      {{ "name": "segment_id", "type": "integer" }}
     ],
-    "output": {{{{
-        "segment_id": "integer",
-        "activity_by_hour": "list[object]",
-        "peak_activity": "string",
-        "peak_value": "integer"
-    }}}}
-  }}}},
-  {{{{
+    "output": {{
+      "segment_id": "integer",
+      "activity_by_hour": "list[object]",
+      "peak_activity": "string",
+      "peak_value": "integer"
+    }}
+  }},
+
+  {{
+    "name": "get_segment_activity_by_day_part",
+    "objective": "Return reading activity grouped into day parts (morning, afternoon, evening, night) and identify the most active day part.",
+    "arguments": [
+      {{ "name": "segment_id", "type": "integer" }}
+    ],
+    "output": {{
+      "segment_id": "integer",
+      "activity_by_day_part": "dictionary",
+      "peak_day_part": "string",
+      "peak_value": "integer"
+    }}
+  }},
+
+  {{
     "name": "get_segment_articles_by_time",
-    "objective": "Retrieve articles read by a user segment within a specific time window (time format 0 to 24 hours).",
+    "objective": "Retrieve articles read by a user segment in a specific time window. (start_hour and end_hour cant be the same time, should be at least one hour difference ex: start_hour:7 - end_hour:8, start_hour:15 - end_hour:16. NO:  start_hour:14 - end_hour:14)",
     "arguments": [
-      {{{{ "name": "segment_id", "type": "integer" }}}},
-      {{{{ "name": "start_hour", "type": "integer" }}}},
-      {{{{ "name": "end_hour", "type": "integer" }}}}
+      {{ "name": "segment_id", "type": "integer" }},
+      {{ "name": "start_hour", "type": "integer" }},
+      {{ "name": "end_hour", "type": "integer" }}
     ],
-    "output": {{{{
-        "segment_id": "integer",
-        "start_hour": "integer",
-        "end_hour": "integer",
-        "articles": "list[string]"
-    }}}}
-  }}}},
-  {{{{
+    "output": {{
+      "segment_id": "integer",
+      "start_hour": "integer",
+      "end_hour": "integer",
+      "articles": "list[string]"
+    }}
+  }},
+
+  {{
+    "name": "get_segment_engage_docs",
+    "objective": "Return the list of articles that users in the segment engaged with.",
+    "arguments": [
+      {{ "name": "segment_id", "type": "integer" }}
+    ],
+    "output": {{
+      "segment_id": "integer",
+      "docs_engage": "list[string]"
+    }}
+  }},
+
+  {{
+    "name": "get_segment_not_engage_docs",
+    "objective": "Return the list of articles that users in the segment did not engage with.",
+    "arguments": [
+      {{ "name": "segment_id", "type": "integer" }}
+    ],
+    "output": {{
+      "segment_id": "integer",
+      "docs_notengage": "list[string]"
+    }}
+  }},
+
+  {{
+    "name": "get_segment_high_rep_docs",
+    "objective": "Retrieve documents that best represent this segment's reading interests.",
+    "arguments": [
+      {{ "name": "segment_id", "type": "integer" }}
+    ],
+    "output": {{
+      "segment_id": "integer",
+      "high_representative_docs": "list[string]"
+    }}
+  }},
+
+  {{
+    "name": "get_articles_info",
+    "objective": "Retrieve rich metadata for a list of articles including title, teaser text, and publication date.",
+    "arguments": [
+      {{ "name": "articles_ids", "type": "list[string]" }}
+    ],
+    "output": [
+      {{
+        "id": "string",
+        "title": "string",
+        "teaserText": "string",
+        "first_publication_date": "datetime"
+      }}
+    ]
+  }},
+
+  {{
+    "name": "get_top_recent_articles",
+    "objective": "Filter articles by most recent publication date.",
+    "arguments": [
+      {{ "name": "articles_ids", "type": "list[string]" }},
+      {{ "name": "top", "type": "integer" }}
+    ],
+    "output": [
+      {{
+        "title": "string",
+        "teaserText": "string",
+        "first_publication_date": "datetime"
+      }}
+    ]
+  }},
+
+  {{
+    "name": "get_unique_clusters",
+    "objective": "Return unique topic clusters that appear in a list of articles.",
+    "arguments": [
+      {{ "name": "articles_ids", "type": "list[string]" }}
+    ],
+    "output": "list[integer]"
+  }},
+
+  {{
     "name": "get_news_topics_info",
-    "objective": "Retrieve information about news topics including titles and descriptions.",
+    "objective": "Retrieve title and description for a list of topics.",
     "arguments": [
-      {{{{ "name": "topics_id", "type": "list[integer]" }}}}
+      {{ "name": "topics_id", "type": "list[integer]" }}
     ],
-    "output": {{{{
-        "topics": "list[object]"
-    }}}}
-  }}}}
+    "output": [
+      {{
+        "title": "string",
+        "desc": "string"
+      }}
+    ]
+  }},
+
+  {{
+    "name": "get_news_topics_high_docs",
+    "objective": "Retrieve the most relevant/high-documents in a topic.",
+    "arguments": [
+      {{ "name": "topics_id", "type": "list[integer]" }}
+    ],
+    "output": "list[string]"
+  }},
+
+  {{
+    "name": "get_news_topics_low_docs",
+    "objective": "Retrieve the least relevant/low-documents in a topic.",
+    "arguments": [
+      {{ "name": "topics_id", "type": "list[integer]" }}
+    ],
+    "output": "list[string]"
+  }}
 ]
 
 
@@ -157,23 +302,32 @@ Your output must be a JSON array of tasks, where each task represents one tool c
 💡 POSITIVE EXAMPLES
 -----------------------------------
 
-**Example 1 — Simple (no analysis)**
-User Query: "Show me the engagement statistics for user segment 3."
-Plan:
+
+### Example 1 — Simple (no analysis)
+**User Query:**
+"Show me the engagement statistics for user segment 3."
+
+**Plan:**
 [
   {{
     "task": "get_segment_engagement_stats",
     "id": "engagement_stats_segment3",
     "analyze_answer": false,
     "dep": [],
-    "args": [{{ "key": "segment_id", "value": "3" }}]
+    "args": [
+      {{ "key": "segment_id", "value": "3" }}
+    ]
   }}
 ]
 
 
-**Example 2 — With analysis and property targeting**
-User Query: "For the segment 'Politische Debatten und Kriminalität im Fokus', what are the topics consumed during peak hours?"
-Plan:
+---
+
+### Example 2 — With analysis and property targeting
+**User Query:**
+"For the segment 'Politische Debatten und Kriminalität im Fokus', what are the topics consumed during peak hours?"
+
+**Plan:**
 [
   {{
     "task": "get_segment_time_activity",
@@ -181,7 +335,9 @@ Plan:
     "analyze_answer": true,
     "analyze_target_property": "peak_activity",
     "dep": [],
-    "args": [{{ "key": "segment_id", "value": "11" }}]
+    "args": [
+      {{ "key": "segment_id", "value": "11" }}
+    ]
   }},
   {{
     "task": "get_segment_articles_by_time",
@@ -215,16 +371,22 @@ Plan:
 ]
 
 
-**Example 3 — With property extraction only (no analysis)**
-User Query: "List the main topics represented by the most representative articles in segment 11."
-Plan:
+---
+
+### Example 3 — Property extraction only
+**User Query:**
+"List the main topics represented by the most representative articles in segment 11."
+
+**Plan:**
 [
   {{
     "task": "get_segment_high_rep_docs",
     "id": "high_rep_docs_segment11",
     "analyze_answer": false,
     "dep": [],
-    "args": [{{ "key": "segment_id", "value": "11" }}]
+    "args": [
+      {{ "key": "segment_id", "value": "11" }}
+    ]
   }},
   {{
     "task": "get_unique_clusters",
@@ -242,6 +404,889 @@ Plan:
     "dep": ["topic_clusters_segment11"],
     "args": [
       {{ "key": "topics_id", "value": "DEP_topic_clusters_segment11" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 4 — Region focus (simple sequence)
+**User Query:**
+"What regions read content from segment 7 the most?"
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_regions",
+    "id": "regions_segment7",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "7" }},
+      {{ "key": "top_n", "value": "5" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 5 — Topic prediction
+**User Query:**
+"For segment 9, based on their topic patterns, what topic are they likely to read after 'Wirtschaft'?"
+
+**Plan:**
+[
+  {{
+    "task": "get_next_topic_prediction",
+    "id": "next_topic_seg9",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "9" }},
+      {{ "key": "current_topic", "value": "Wirtschaft" }},
+      {{ "key": "top_n", "value": "3" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 6 — Least engaged docs → metadata
+**User Query:**
+"For segment 14, show me the least engaging articles and their headlines."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_not_engage_docs",
+    "id": "not_engaged_docs_segment14",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "14" }}
+    ]
+  }},
+  {{
+    "task": "get_articles_info",
+    "id": "articles_info_segment14",
+    "analyze_answer": false,
+    "dep": ["not_engaged_docs_segment14"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_not_engaged_docs_segment14", "property": "docs_notengage" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 7 — Multi-step with day part + analysis
+**User Query:**
+"During what part of the day does segment 5 read the most, and what topics are consumed then?"
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_activity_by_day_part",
+    "id": "day_part_activity_seg5",
+    "analyze_answer": true,
+    "analyze_target_property": "peak_day_part",
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "5" }}
+    ]
+  }},
+  {{
+    "task": "get_segment_engage_docs",
+    "id": "articles_seg5_peak_day_part",
+    "analyze_answer": false,
+    "dep": ["day_part_activity_seg5"],
+    "args": [
+      {{ "key": "segment_id", "value": "5" }}
+    ]
+  }},
+  {{
+    "task": "get_unique_clusters",
+    "id": "topics_seg5_peak_day_part",
+    "analyze_answer": false,
+    "dep": ["articles_seg5_peak_day_part"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_articles_seg5_peak_day_part", "property": "docs_engage" }}
+    ]
+  }},
+  {{
+    "task": "get_news_topics_info",
+    "id": "topic_info_seg5_peak_day_part",
+    "analyze_answer": false,
+    "dep": ["topics_seg5_peak_day_part"],
+    "args": [
+      {{ "key": "topics_id", "value": "DEP_topics_seg5_peak_day_part" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 8 — Recent articles → clusters → topic details
+**User Query:**
+"From the latest articles published that segment 2 read, which topics do they relate to?"
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_engage_docs",
+    "id": "engaged_docs_seg2",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "2" }}
+    ]
+  }},
+  {{
+    "task": "get_top_recent_articles",
+    "id": "recent_articles_seg2",
+    "analyze_answer": false,
+    "dep": ["engaged_docs_seg2"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_engaged_docs_seg2", "property": "docs_engage" }},
+      {{ "key": "top", "value": "5" }}
+    ]
+  }},
+  {{
+    "task": "get_unique_clusters",
+    "id": "clusters_seg2_recent",
+    "analyze_answer": false,
+    "dep": ["recent_articles_seg2"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_recent_articles_seg2" }}
+    ]
+  }},
+  {{
+    "task": "get_news_topics_info",
+    "id": "topic_info_seg2_recent",
+    "analyze_answer": false,
+    "dep": ["clusters_seg2_recent"],
+    "args": [
+      {{ "key": "topics_id", "value": "DEP_clusters_seg2_recent" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 9 — Simple (no analysis)
+**User Query:**
+"Show me the reading activity by hour for segment 11."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_time_activity",
+    "id": "time_activity_segment11_simple",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "11" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 10 — Simple (no analysis)
+**User Query:**
+"During what part of the day does segment 5 read the most?"
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_activity_by_day_part",
+    "id": "day_part_activity_seg5_simple",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "5" }}
+    ]
+  }}
+]
+
+
+---
+### Example 11 — Segment profile (single tool)
+**User Query:**
+"Give me a quick profile summary for segment 6."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_description",
+    "id": "segment6_description",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "6" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 12 — Engagement + profile (two independent tools)
+**User Query:**
+"For segment 8, show the segment description and engagement stats."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_description",
+    "id": "seg8_desc",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "8" }}
+    ]
+  }},
+  {{
+    "task": "get_segment_engagement_stats",
+    "id": "seg8_engagement",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "8" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 13 — Most engaged docs → metadata
+**User Query:**
+"For segment 10, show the most engaged articles and their teaser text."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_engage_docs",
+    "id": "engaged_docs_seg10",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "10" }}
+    ]
+  }},
+  {{
+    "task": "get_articles_info",
+    "id": "info_engaged_docs_seg10",
+    "analyze_answer": false,
+    "dep": ["engaged_docs_seg10"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_engaged_docs_seg10", "property": "docs_engage" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 14 — Representative docs → most recent 3
+**User Query:**
+"From the most representative documents of segment 12, show the 3 most recent ones."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_high_rep_docs",
+    "id": "high_rep_docs_seg12",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "12" }}
+    ]
+  }},
+  {{
+    "task": "get_top_recent_articles",
+    "id": "top3_recent_from_rep_seg12",
+    "analyze_answer": false,
+    "dep": ["high_rep_docs_seg12"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_high_rep_docs_seg12", "property": "high_representative_docs" }},
+      {{ "key": "top", "value": "3" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 15 — Hour window → topics
+**User Query:**
+"For segment 4, what topics are read between 18 and 21?"
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_articles_by_time",
+    "id": "articles_seg4_18_21",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "4" }},
+      {{ "key": "start_hour", "value": "18" }},
+      {{ "key": "end_hour", "value": "21" }}
+    ]
+  }},
+  {{
+    "task": "get_unique_clusters",
+    "id": "clusters_seg4_18_21",
+    "analyze_answer": false,
+    "dep": ["articles_seg4_18_21"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_articles_seg4_18_21", "property": "articles" }}
+    ]
+  }},
+  {{
+    "task": "get_news_topics_info",
+    "id": "topics_info_seg4_18_21",
+    "analyze_answer": false,
+    "dep": ["clusters_seg4_18_21"],
+    "args": [
+      {{ "key": "topics_id", "value": "DEP_clusters_seg4_18_21" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 16 — Topic transitions (single tool)
+**User Query:**
+"For segment 13, what are the top 8 topic transitions?"
+
+**Plan:**
+[
+  {{
+    "task": "get_topic_transitions",
+    "id": "topic_transitions_seg13_top8",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "13" }},
+      {{ "key": "top_n", "value": "8" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 17 — Topic prediction with different top_n
+**User Query:**
+"In segment 15, after the topic 'Sport', what are the next 5 likely topics?"
+
+**Plan:**
+[
+  {{
+    "task": "get_next_topic_prediction",
+    "id": "next_topic_seg15_sport_top5",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "15" }},
+      {{ "key": "current_topic", "value": "Sport" }},
+      {{ "key": "top_n", "value": "5" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 18 — Regions + segment description (two tools)
+**User Query:**
+"For segment 1, show the description and the top 7 regions."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_description",
+    "id": "seg1_desc",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "1" }}
+    ]
+  }},
+  {{
+    "task": "get_segment_regions",
+    "id": "seg1_regions_top7",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "1" }},
+      {{ "key": "top_n", "value": "7" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 19 — Low-engagement docs → recent 5
+**User Query:**
+"For segment 16, show the 5 most recent low-engagement articles."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_not_engage_docs",
+    "id": "low_engage_docs_seg16",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "16" }}
+    ]
+  }},
+  {{
+    "task": "get_top_recent_articles",
+    "id": "recent_low_engage_seg16_top5",
+    "analyze_answer": false,
+    "dep": ["low_engage_docs_seg16"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_low_engage_docs_seg16", "property": "docs_notengage" }},
+      {{ "key": "top", "value": "5" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 20 — Complex: peak hour → recent articles → topics (analysis)
+**User Query:**
+"For segment 17, identify the peak hour and list the topics from the 3 most recent articles read during that peak hour."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_time_activity",
+    "id": "time_activity_seg17",
+    "analyze_answer": true,
+    "analyze_target_property": "peak_activity",
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "17" }}
+    ]
+  }},
+  {{
+    "task": "get_segment_articles_by_time",
+    "id": "articles_seg17_peak",
+    "analyze_answer": false,
+    "dep": ["time_activity_seg17"],
+    "args": [
+      {{ "key": "segment_id", "value": "17" }},
+      {{ "key": "start_hour", "value": "DEP_time_activity_seg17", "property": "start_hour" }},
+      {{ "key": "end_hour", "value": "DEP_time_activity_seg17", "property": "end_hour" }}
+    ]
+  }},
+  {{
+    "task": "get_top_recent_articles",
+    "id": "recent_articles_seg17_peak_top3",
+    "analyze_answer": false,
+    "dep": ["articles_seg17_peak"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_articles_seg17_peak", "property": "articles" }},
+      {{ "key": "top", "value": "3" }}
+    ]
+  }},
+  {{
+    "task": "get_unique_clusters",
+    "id": "clusters_seg17_peak_recent",
+    "analyze_answer": false,
+    "dep": ["recent_articles_seg17_peak_top3"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_recent_articles_seg17_peak_top3" }}
+    ]
+  }},
+  {{
+    "task": "get_news_topics_info",
+    "id": "topics_info_seg17_peak_recent",
+    "analyze_answer": false,
+    "dep": ["clusters_seg17_peak_recent"],
+    "args": [
+      {{ "key": "topics_id", "value": "DEP_clusters_seg17_peak_recent" }}
+    ]
+  }}
+]
+
+
+### Example 21 — Hour window → article metadata
+**User Query:**
+"For segment 3, show article headlines read between 6 and 9."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_articles_by_time",
+    "id": "articles_seg3_6_9",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "3" }},
+      {{ "key": "start_hour", "value": "6" }},
+      {{ "key": "end_hour", "value": "9" }}
+    ]
+  }},
+  {{
+    "task": "get_articles_info",
+    "id": "info_articles_seg3_6_9",
+    "analyze_answer": false,
+    "dep": ["articles_seg3_6_9"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_articles_seg3_6_9", "property": "articles" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 22 — Most engaged docs → topics
+**User Query:**
+"For segment 6, what topics appear in their most engaged documents?"
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_engage_docs",
+    "id": "engaged_docs_seg6",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "6" }}
+    ]
+  }},
+  {{
+    "task": "get_unique_clusters",
+    "id": "clusters_engaged_seg6",
+    "analyze_answer": false,
+    "dep": ["engaged_docs_seg6"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_engaged_docs_seg6", "property": "docs_engage" }}
+    ]
+  }},
+  {{
+    "task": "get_news_topics_info",
+    "id": "topics_engaged_seg6",
+    "analyze_answer": false,
+    "dep": ["clusters_engaged_seg6"],
+    "args": [
+      {{ "key": "topics_id", "value": "DEP_clusters_engaged_seg6" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 23 — Low-engagement docs → topics
+**User Query:**
+"For segment 9, what topics are associated with their least engaging documents?"
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_not_engage_docs",
+    "id": "low_docs_seg9",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "9" }}
+    ]
+  }},
+  {{
+    "task": "get_unique_clusters",
+    "id": "clusters_low_docs_seg9",
+    "analyze_answer": false,
+    "dep": ["low_docs_seg9"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_low_docs_seg9", "property": "docs_notengage" }}
+    ]
+  }},
+  {{
+    "task": "get_news_topics_info",
+    "id": "topics_low_docs_seg9",
+    "analyze_answer": false,
+    "dep": ["clusters_low_docs_seg9"],
+    "args": [
+      {{ "key": "topics_id", "value": "DEP_clusters_low_docs_seg9" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 24 — Topic info → high docs → article metadata
+**User Query:**
+"For topic 21, show the top representative documents and their titles."
+
+**Plan:**
+[
+  {{
+    "task": "get_news_topics_high_docs",
+    "id": "topic21_high_docs",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "topic_id", "value": "21" }}
+    ]
+  }},
+  {{
+    "task": "get_articles_info",
+    "id": "topic21_high_docs_info",
+    "analyze_answer": false,
+    "dep": ["topic21_high_docs"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_topic21_high_docs" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 25 — Topic info → low docs → most recent 4
+**User Query:**
+"For topic 8, show the least representative documents and select the 4 most recent."
+
+**Plan:**
+[
+  {{
+    "task": "get_news_topics_low_docs",
+    "id": "topic8_low_docs",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "topic_id", "value": "8" }}
+    ]
+  }},
+  {{
+    "task": "get_top_recent_articles",
+    "id": "topic8_low_docs_recent4",
+    "analyze_answer": false,
+    "dep": ["topic8_low_docs"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_topic8_low_docs" }},
+      {{ "key": "top", "value": "4" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 26 — Complex: peak hour → articles → topics + topic docs
+**User Query:**
+"For segment 18, find the peak hour topics and then show high representative docs for each topic."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_time_activity",
+    "id": "time_activity_seg18",
+    "analyze_answer": true,
+    "analyze_target_property": "peak_activity",
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "18" }}
+    ]
+  }},
+  {{
+    "task": "get_segment_articles_by_time",
+    "id": "articles_seg18_peak",
+    "analyze_answer": false,
+    "dep": ["time_activity_seg18"],
+    "args": [
+      {{ "key": "segment_id", "value": "18" }},
+      {{ "key": "start_hour", "value": "DEP_time_activity_seg18", "property": "start_hour" }},
+      {{ "key": "end_hour", "value": "DEP_time_activity_seg18", "property": "end_hour" }}
+    ]
+  }},
+  {{
+    "task": "get_unique_clusters",
+    "id": "clusters_seg18_peak",
+    "analyze_answer": false,
+    "dep": ["articles_seg18_peak"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_articles_seg18_peak", "property": "articles" }}
+    ]
+  }},
+  {{
+    "task": "get_news_topics_info",
+    "id": "topics_info_seg18_peak",
+    "analyze_answer": false,
+    "dep": ["clusters_seg18_peak"],
+    "args": [
+      {{ "key": "topics_id", "value": "DEP_clusters_seg18_peak" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 27 — Transitions + follow-up prediction (two tools)
+**User Query:**
+"For segment 19, show top 5 topic transitions and predict next topics after 'Politik'."
+
+**Plan:**
+[
+  {{
+    "task": "get_topic_transitions",
+    "id": "transitions_seg19_top5",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "19" }},
+      {{ "key": "top_n", "value": "5" }}
+    ]
+  }},
+  {{
+    "task": "get_next_topic_prediction",
+    "id": "next_topics_seg19_politik",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "19" }},
+      {{ "key": "current_topic", "value": "Politik" }},
+      {{ "key": "top_n", "value": "3" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 28 — Regions + peak hour (two tools)
+**User Query:**
+"For segment 20, show the top 5 regions and the peak hour of reading."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_regions",
+    "id": "seg20_regions_top5",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "20" }},
+      {{ "key": "top_n", "value": "5" }}
+    ]
+  }},
+  {{
+    "task": "get_segment_time_activity",
+    "id": "seg20_time_activity",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "20" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 29 — Representative docs → article info → topics
+**User Query:**
+"For segment 21, show the representative article titles and the topics they map to."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_high_rep_docs",
+    "id": "rep_docs_seg21",
+    "analyze_answer": false,
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "21" }}
+    ]
+  }},
+  {{
+    "task": "get_articles_info",
+    "id": "rep_docs_seg21_info",
+    "analyze_answer": false,
+    "dep": ["rep_docs_seg21"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_rep_docs_seg21", "property": "high_representative_docs" }}
+    ]
+  }},
+  {{
+    "task": "get_unique_clusters",
+    "id": "rep_docs_seg21_clusters",
+    "analyze_answer": false,
+    "dep": ["rep_docs_seg21_info"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_rep_docs_seg21_info" }}
+    ]
+  }},
+  {{
+    "task": "get_news_topics_info",
+    "id": "rep_docs_seg21_topics",
+    "analyze_answer": false,
+    "dep": ["rep_docs_seg21_clusters"],
+    "args": [
+      {{ "key": "topics_id", "value": "DEP_rep_docs_seg21_clusters" }}
+    ]
+  }}
+]
+
+
+---
+
+### Example 30 — Complex: peak hour → recent articles → titles
+**User Query:**
+"For segment 22, find the peak hour and show the 5 most recent articles read in that hour."
+
+**Plan:**
+[
+  {{
+    "task": "get_segment_time_activity",
+    "id": "time_activity_seg22",
+    "analyze_answer": true,
+    "analyze_target_property": "peak_activity",
+    "dep": [],
+    "args": [
+      {{ "key": "segment_id", "value": "22" }}
+    ]
+  }},
+  {{
+    "task": "get_segment_articles_by_time",
+    "id": "articles_seg22_peak",
+    "analyze_answer": false,
+    "dep": ["time_activity_seg22"],
+    "args": [
+      {{ "key": "segment_id", "value": "22" }},
+      {{ "key": "start_hour", "value": "DEP_time_activity_seg22", "property": "start_hour" }},
+      {{ "key": "end_hour", "value": "DEP_time_activity_seg22", "property": "end_hour" }}
+    ]
+  }},
+  {{
+    "task": "get_top_recent_articles",
+    "id": "recent_seg22_peak_top5",
+    "analyze_answer": false,
+    "dep": ["articles_seg22_peak"],
+    "args": [
+      {{ "key": "articles_ids", "value": "DEP_articles_seg22_peak", "property": "articles" }},
+      {{ "key": "top", "value": "5" }}
     ]
   }}
 ]
