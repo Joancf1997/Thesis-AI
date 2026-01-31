@@ -603,8 +603,8 @@ Free University of Bozen-Bolzano (UNIBZ)
 ## 🙏 Acknowledgments
 
 - Free University of Bozen-Bolzano for academic support
+- Davisd Massimo for the guidance and support during the thesis
 - News organization for providing anonymized data
-- LangChain and LangGraph communities for framework support
 
 ---
 
@@ -614,12 +614,6 @@ Free University of Bozen-Bolzano (UNIBZ)
 - [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [OpenAI API Documentation](https://platform.openai.com/docs/)
-
----
-
-## 📧 Contact
-
-For questions or collaboration opportunities, please open an issue in the repository.
 
 ---
 
