@@ -215,7 +215,7 @@ class TaskExecutor:
                         # --------------------------------
                         #  Handle analyze_answer flag
                         # --------------------------------
-                        if task.get("analyze_answer", False):
+                        if task.get("analyze_answer", False) and len(plan_versions) < 3:
                             target_prop = task.get("analyze_target_property")
                             if target_prop:
                                 try:
